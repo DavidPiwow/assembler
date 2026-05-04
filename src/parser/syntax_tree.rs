@@ -1,121 +1,6 @@
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
-use crate::parser::scanner::{Token, TokenError};
-
-#[derive(Debug)]
-enum Operation {
-    Add,
-    And,
-    Br,
-    Jmp,
-    Jsr,
-    Jsrr,
-    Ld,
-    Ldi,
-    Ldr,
-    Lea,
-    Not,
-    Ret,
-    Rti,
-    St,
-    Sti,
-    Str,
-    Trap,
-}
-
-#[derive(Debug)]
-enum TrapMode {
-    Getc,
-    Out,
-    Puts,
-    In,
-    Halt,
-}
-
-#[derive(Debug)]
-struct RegisterNode {
-    value: u8,
-}
-
-#[derive(Debug)]
-struct IntNode {
-    value: i16,
-}
-
-#[derive(Debug)]
-enum ArithmeticOperand {
-    Register(RegisterNode),
-    Integer(IntNode),
-}
-
-#[derive(Debug)]
-enum OffsetType {
-    Label(LabelNode),
-    Integer(IntNode),
-}
-
-#[derive(Debug)]
-struct LabelNode {
-    label: String,
-}
-
-#[derive(Debug)]
-struct ArithmeticNode {
-    operation: Operation,
-    operand1: RegisterNode,
-    operand2: RegisterNode,
-    operand3: ArithmeticOperand,
-}
-
-#[derive(Debug)]
-struct NotNode {
-    operation: Operation,
-    operand1: RegisterNode,
-    operand2: RegisterNode,
-}
-
-#[derive(Debug)]
-struct MemOpNode {
-    operation: Operation,
-    operand1: RegisterNode,
-    operand2: RegisterNode,
-    offset: IntNode,
-}
-
-#[derive(Debug)]
-struct IMemOpNode {
-    operation: Operation,
-    operand1: RegisterNode,
-    offset: OffsetType,
-}
-
-#[derive(Debug)]
-struct TrapNode {
-    operation: Operation,
-    val: TrapMode,
-}
-
-#[derive(Debug)]
-struct JumpNode {
-    operation: Operation,
-    operand1: RegisterNode,
-}
-
-#[derive(Debug)]
-struct IJumpNode {
-    operation: Operation,
-    offset: OffsetType,
-}
-#[derive(Debug)]
-
-struct RetNode {
-    operation: Operation,
-}
-
-#[derive(Debug)]
-struct RtiNode {
-    operation: Operation,
-}
+use crate::parser::{node::{ArithmeticNode, ArithmeticOperand, IJumpNode, IMemOpNode, IntNode, JumpNode, LabelNode, MemOpNode, NotNode, OffsetType, Operation, RegisterNode, TrapMode, TrapNode}, scanner::{Token, TokenError}};
 
 pub fn scan_sequence(tokens: Vec<Token>) -> Result<(), TokenError> {
     let mut pos = 0;
@@ -190,8 +75,8 @@ fn convert_integer(token: &Token, bits: u8) -> Result<IntNode, TokenError> {
         let res = v[1..].parse::<i16>();
         match res {
             Ok(v) => {
-                if v >= -bit_max && v < (bit_max - 1) {
-                    return Ok(IntNode { value: v });
+                if v >= -bit_max && v <= (bit_max - 1) {
+                    return Ok(IntNode::from(v));
                 } else {
                     return Err(TokenError::OutOfBounds(v.to_string()));
                 }
@@ -208,7 +93,7 @@ fn convert_register(token: &Token) -> Result<RegisterNode, TokenError> {
             let res = val[1..].parse::<u8>();
             if let Ok(v) = res {
                 if v <= 7 {
-                    return Ok(RegisterNode { value: v });
+                    return Ok(RegisterNode::from(v));
                 }
             }
 
@@ -240,22 +125,22 @@ fn create_arithmetic_node(tokens: &[Token]) -> Result<ArithmeticNode, TokenError
         Token::Integer(_) => {
             let intnode = convert_integer(operand3, 5)?;
 
-            return Ok(ArithmeticNode {
+            return Ok(ArithmeticNode::from(
                 operation,
                 operand1,
                 operand2,
-                operand3: ArithmeticOperand::Integer(intnode),
-            });
+                ArithmeticOperand::Integer(intnode))
+            );
         }
         Token::Register(_) => {
             let regnode = convert_register(operand3)?;
 
-            return Ok(ArithmeticNode {
+            return Ok(ArithmeticNode::from(
                 operation,
                 operand1,
                 operand2,
-                operand3: ArithmeticOperand::Register(regnode),
-            });
+                ArithmeticOperand::Register(regnode),
+            ));
         }
         _ => return Err(TokenError::UnknownToken(operand3.clone())),
     }
@@ -265,11 +150,11 @@ fn create_not_node(tokens: &[Token]) -> Result<NotNode, TokenError> {
     let operand1 = convert_register(&tokens[1])?;
     let operand2 = convert_register(&tokens[2])?;
 
-    Ok(NotNode {
-        operation: Operation::Not,
+    Ok(NotNode::from(
+        Operation::Not,
         operand1,
         operand2,
-    })
+    ))
 }
 
 fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
@@ -286,12 +171,12 @@ fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
     let operand2 = convert_register(&tokens[2])?;
     let offset = convert_integer(&tokens[3], 6)?;
 
-    return Ok(MemOpNode {
+    return Ok(MemOpNode::from(
         operation,
         operand1,
         operand2,
         offset,
-    });
+    ));
 }
 
 fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
@@ -310,21 +195,19 @@ fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
     let operand1 = convert_register(&tokens[1])?;
 
     let offset = match &tokens[2] {
-        Token::Label(s) => OffsetType::Label(LabelNode {
-            label: s.to_string(),
-        }),
-        Token::Integer(i) => {
+        Token::Label(s) => OffsetType::Label(LabelNode::from(s.to_string())),
+        Token::Integer(_) => {
             let res = convert_integer(&tokens[2], 9)?;
             OffsetType::Integer(res)
         }
         _ => return Err(TokenError::UnknownToken(tokens[2].clone())),
     };
 
-    return Ok(IMemOpNode {
+    return Ok(IMemOpNode::from(
         operation,
         operand1,
         offset,
-    });
+    ));
 }
 
 fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
@@ -340,10 +223,10 @@ fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
             _ => return Err(TokenError::UnknownToken(val.clone())),
         };
 
-        return Ok(TrapNode {
-            operation: Operation::Trap,
-            val: trap_mode,
-        });
+        return Ok(TrapNode::from(
+            Operation::Trap,
+            trap_mode,
+        ));
     }
 
     return Err(TokenError::UnknownToken(val.clone()));
@@ -361,10 +244,10 @@ fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
 
     let operand1 = convert_register(&tokens[1])?;
 
-    return Ok(JumpNode {
+    return Ok(JumpNode::from(
         operation,
         operand1,
-    });
+    ));
 }
 
 fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
@@ -378,9 +261,9 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
     };
 
     let offset = match &tokens[1] {
-        Token::Label(s) => OffsetType::Label(LabelNode {
-            label: s.to_string(),
-        }),
+        Token::Label(s) => OffsetType::Label(LabelNode::from(
+            s.to_string(),
+        )),
         Token::Integer(i) => {
             let res = convert_integer(&tokens[1], 9)?;
             OffsetType::Integer(res)
@@ -388,5 +271,5 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
         _ => return Err(TokenError::UnknownToken(tokens[1].clone())),
     };
 
-    return Ok(IJumpNode { operation, offset });
+    return Ok(IJumpNode::from(operation, offset));
 }

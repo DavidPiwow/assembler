@@ -11,10 +11,8 @@ pub enum Token {
 
 #[derive(Debug)]
 pub enum TokenError {
-    UnknownOperation(String),
     OutOfBounds(String),
     UnknownRegister(String),
-
     UnknownToken(Token),
 }
 
@@ -23,9 +21,6 @@ impl Error for TokenError {}
 impl fmt::Display for TokenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenError::UnknownOperation(operation) => {
-                write!(f, "{operation} is not a known operation")
-            }
             TokenError::OutOfBounds(value) => {
                 write!(f, "{value} exceeds the limit for this operation")
             }
@@ -79,6 +74,12 @@ pub fn tokenize(text: &str) -> Vec<Token> {
                 tokens.push(Token::Integer(char_stack.iter().collect()));
             } else if char_stack[0] == '.' {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
+                if let Token::Directive(s) = &tokens[tokens.len()-1]  {
+                    if s == ".END" {
+                        char_stack.clear();
+                        break;
+                    }
+                }
             }
             char_stack.clear();
         } else {
