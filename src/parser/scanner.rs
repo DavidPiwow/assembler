@@ -14,24 +14,29 @@ pub enum TokenError {
     UnknownOperation(String),
     OutOfBounds(String),
     UnknownRegister(String),
-    
+
     UnknownToken(Token),
 }
 
-impl Error for TokenError{}
+impl Error for TokenError {}
 
 impl fmt::Display for TokenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenError::UnknownOperation(operation) => write!(f, "{operation} is not a known operation"),
-            TokenError::OutOfBounds(value) => write!(f, "{value} exceeds the limit for this operation"),
-            TokenError::UnknownRegister(register) => write!(f, "{register} is not a valid register, only R1-R8 exists"),
-            
+            TokenError::UnknownOperation(operation) => {
+                write!(f, "{operation} is not a known operation")
+            }
+            TokenError::OutOfBounds(value) => {
+                write!(f, "{value} exceeds the limit for this operation")
+            }
+            TokenError::UnknownRegister(register) => {
+                write!(f, "{register} is not a valid register, only R1-R8 exists")
+            }
+
             TokenError::UnknownToken(token) => write!(f, "{token:?} was not expected here"),
-        } 
+        }
     }
 }
-
 
 #[inline(always)]
 fn starts_opcode(c: char) -> bool {
@@ -83,7 +88,7 @@ pub fn tokenize(text: &str) -> Vec<Token> {
         }
 
         if cur_char == ';' {
-            while string_pos < text.len() && cur_char != '\n'  {
+            while string_pos < text.len() && cur_char != '\n' {
                 string_pos += 1;
                 cur_char = chars[string_pos];
             }
@@ -93,6 +98,26 @@ pub fn tokenize(text: &str) -> Vec<Token> {
         }
 
         string_pos += 1;
+    }
+
+    if !char_stack.is_empty() {
+        if char_stack.len() >= 2 {
+            if char_stack[0] == 'R' && char_stack[1].is_numeric() {
+                tokens.push(Token::Register(char_stack.iter().collect()));
+            }
+        } else if starts_opcode(char_stack[0]) {
+            let op = find_opcode(&char_stack);
+            if op.is_some() {
+                tokens.push(op.unwrap());
+            } else {
+                tokens.push(Token::Label(char_stack.iter().collect()));
+            }
+        } else if char_stack[0] == '#' || char_stack[0] == 'x' {
+            tokens.push(Token::Integer(char_stack.iter().collect()));
+        } else if char_stack[0] == '.' {
+            tokens.push(Token::Directive(char_stack.iter().collect()));
+        }
+        char_stack.clear();
     }
 
     tokens
