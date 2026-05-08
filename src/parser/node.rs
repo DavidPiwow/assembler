@@ -1,4 +1,7 @@
-pub trait LCNode {
+use std::fmt::Debug;
+
+
+pub trait LCNode: Debug {
     fn to_binary(&self) -> u16;
 }
 
@@ -15,7 +18,7 @@ pub enum Operation {
     Ldr,
     Lea,
     Not,
-    Ret,
+    Ret, 
     Rti,
     St,
     Sti,
@@ -76,6 +79,12 @@ impl LabelNode {
     }
 }
 
+impl LCNode for LabelNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct ArithmeticNode {
     operation: Operation,
@@ -100,6 +109,12 @@ impl ArithmeticNode {
     }
 }
 
+impl LCNode for ArithmeticNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct NotNode {
     operation: Operation,
@@ -114,6 +129,12 @@ impl NotNode {
             operand1,
             operand2,
         }
+    }
+}
+
+impl LCNode for NotNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
     }
 }
 
@@ -141,6 +162,12 @@ impl MemOpNode {
     }
 }
 
+impl LCNode for MemOpNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct IMemOpNode {
     operation: Operation,
@@ -158,6 +185,12 @@ impl IMemOpNode {
     }
 }
 
+impl LCNode for IMemOpNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct TrapNode {
     operation: Operation,
@@ -169,6 +202,13 @@ impl TrapNode {
         Self { operation, val }
     }
 }
+
+impl LCNode for TrapNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 
 #[derive(Debug)]
 pub struct JumpNode {
@@ -185,6 +225,12 @@ impl JumpNode {
     }
 }
 
+impl LCNode for JumpNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct IJumpNode {
     operation: Operation,
@@ -194,6 +240,12 @@ pub struct IJumpNode {
 impl IJumpNode {
     pub fn from(operation: Operation, offset: OffsetType) -> Self {
         Self { operation, offset }
+    }
+}
+
+impl LCNode for IJumpNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
     }
 }
 
@@ -208,6 +260,12 @@ impl RetNode {
     }
 }
 
+impl LCNode for RetNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct RtiNode {
     operation: Operation,
@@ -216,5 +274,11 @@ pub struct RtiNode {
 impl RtiNode {
     pub fn from(operation: Operation) -> Self {
         Self { operation }
+    }
+}
+
+impl LCNode for RtiNode {
+    fn to_binary(&self) -> u16 {
+        todo!()
     }
 }

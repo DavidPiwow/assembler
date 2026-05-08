@@ -1,11 +1,20 @@
 use std::collections::HashMap;
 
-use crate::parser::{node::{ArithmeticNode, ArithmeticOperand, IJumpNode, IMemOpNode, IntNode, JumpNode, LabelNode, MemOpNode, NotNode, OffsetType, Operation, RegisterNode, TrapMode, TrapNode}, scanner::{Token, TokenError}};
+use crate::parser::{
+    node::{
+        ArithmeticNode, ArithmeticOperand, IJumpNode, IMemOpNode, IntNode, JumpNode, LCNode, LabelNode, MemOpNode, NotNode, OffsetType, Operation, RegisterNode, TrapMode, TrapNode
+    },
+    program::{LabelMap, NodeVec, Program},
+    scanner::{Token, TokenError},
+};
 
-pub fn scan_sequence(tokens: Vec<Token>) -> Result<(), TokenError> {
+pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut pos = 0;
     let mut instr_count = 0;
-    let mut labels: HashMap<String, usize> = HashMap::new();
+
+    let mut labels: LabelMap = HashMap::new();
+    let mut nodes: NodeVec = vec![];
+
     while pos < tokens.len() {
         match &tokens[pos] {
             Token::Directive(_) => {
@@ -16,54 +25,53 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<(), TokenError> {
                 let count = token_count(s.as_str());
                 let slice = &tokens[pos..pos + count + 1];
 
-                match s.as_str() {
+                let node: Box<dyn LCNode> = match s.as_str() {
                     "ADD" | "AND" => {
-                        let node = create_arithmetic_node(slice)?;
-                        println!("{:?}", node);
+                        Box::from(create_arithmetic_node(slice)?)
                     }
                     "LDR" | "STR" => {
-                        let node = create_memory_node(slice)?;
-                        println!("{:?}", node);
+                        Box::from(create_memory_node(slice)?)
                     }
                     "JMP" | "JSRR" => {
-                        let node = create_jump_node(slice)?;
-                        println!("{:?}", node);
+                        Box::from(create_jump_node(slice)?)
                     }
                     "BR" | "BRn" | "BRz" | "BRp" | "JSR" => {
-                        let node = create_ijump_node(slice)?;
-                        println!("{:?}", node);
+                        
+                        Box::from(create_ijump_node(slice)?)
                     }
                     "NOT" => {
-                        let node = create_not_node(slice)?;
-                        println!("{:?}", node);
+                        Box::from(create_not_node(slice)?)
                     }
                     "LD" | "LDI" | "LEA" | "ST" | "STI" => {
-                        let node = create_imemory_node(slice)?;
-                        println!("{:?}", node);
+                        Box::from(create_imemory_node(slice)?)
                     }
-
+                    "HALT" | "TRAP" => {
+                        Box::from(create_trap_node(slice)?)
+                    }
                     _ => return Err(TokenError::UnknownToken(tokens[pos].clone())),
-                }
+                };
+
+                nodes.push(node);
                 pos += count + 1;
                 instr_count += 1;
             }
             Token::Label(s) => {
                 labels.insert(s.to_string(), instr_count);
-                println!("Label {s} at {instr_count}");
                 pos += 1;
             }
             _ => return Err(TokenError::UnknownToken(tokens[pos].clone())),
         }
     }
 
-    Ok(())
+    Ok(Program::from(nodes, labels))
 }
 
 fn token_count(s: &str) -> usize {
     match s {
         "ADD" | "AND" | "LDR" | "STR" => 3,
         "NOT" | "LD" | "LDI" | "LEA" | "ST" | "STI" => 2,
-        "TRAP" | "BR" | "BRn" | "BRz" | "BRp" | "JMP" | "JSR" | "JSRR" => 1,
+        "TRAP"  | "BR" | "BRn" | "BRz" | "BRp" | "JMP" | "JSR" | "JSRR" => 1,
+        "HALT" => 0,
         _ => 0,
     }
 }
@@ -73,18 +81,18 @@ fn convert_integer(token: &Token, bits: u8) -> Result<IntNode, TokenError> {
 
     if let Token::Integer(v) = token {
         let res = v[1..].parse::<i16>();
-        match res {
+        return match res {
             Ok(v) => {
                 if v >= -bit_max && v <= (bit_max - 1) {
-                    return Ok(IntNode::from(v));
+                    Ok(IntNode::from(v))
                 } else {
-                    return Err(TokenError::OutOfBounds(v.to_string()));
+                    Err(TokenError::OutOfBounds(v.to_string()))
                 }
             }
-            Err(_) => return Err(TokenError::UnknownToken(token.clone())),
-        }
+            Err(_) => Err(TokenError::UnknownToken(token.clone())),
+        };
     }
-    return Err(TokenError::UnknownToken(token.clone()));
+    Err(TokenError::UnknownToken(token.clone()))
 }
 
 fn convert_register(token: &Token) -> Result<RegisterNode, TokenError> {
@@ -125,24 +133,24 @@ fn create_arithmetic_node(tokens: &[Token]) -> Result<ArithmeticNode, TokenError
         Token::Integer(_) => {
             let intnode = convert_integer(operand3, 5)?;
 
-            return Ok(ArithmeticNode::from(
+            Ok(ArithmeticNode::from(
                 operation,
                 operand1,
                 operand2,
-                ArithmeticOperand::Integer(intnode))
-            );
+                ArithmeticOperand::Integer(intnode),
+            ))
         }
         Token::Register(_) => {
             let regnode = convert_register(operand3)?;
 
-            return Ok(ArithmeticNode::from(
+            Ok(ArithmeticNode::from(
                 operation,
                 operand1,
                 operand2,
                 ArithmeticOperand::Register(regnode),
-            ));
+            ))
         }
-        _ => return Err(TokenError::UnknownToken(operand3.clone())),
+        _ => Err(TokenError::UnknownToken(operand3.clone())),
     }
 }
 
@@ -150,11 +158,7 @@ fn create_not_node(tokens: &[Token]) -> Result<NotNode, TokenError> {
     let operand1 = convert_register(&tokens[1])?;
     let operand2 = convert_register(&tokens[2])?;
 
-    Ok(NotNode::from(
-        Operation::Not,
-        operand1,
-        operand2,
-    ))
+    Ok(NotNode::from(Operation::Not, operand1, operand2))
 }
 
 fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
@@ -171,12 +175,7 @@ fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
     let operand2 = convert_register(&tokens[2])?;
     let offset = convert_integer(&tokens[3], 6)?;
 
-    return Ok(MemOpNode::from(
-        operation,
-        operand1,
-        operand2,
-        offset,
-    ));
+    Ok(MemOpNode::from(operation, operand1, operand2, offset))
 }
 
 fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
@@ -203,16 +202,26 @@ fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
         _ => return Err(TokenError::UnknownToken(tokens[2].clone())),
     };
 
-    return Ok(IMemOpNode::from(
-        operation,
-        operand1,
-        offset,
-    ));
+    Ok(IMemOpNode::from(operation, operand1, offset))
 }
 
 fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
-    let val = &tokens[1];
+    if tokens.len() == 1 {
+        let token = &tokens[0];
+        match token {
+            Token::Opcode(s) => {
+                return if s == "HALT" {
+                    Ok(TrapNode::from(Operation::Trap, TrapMode::Halt))
+                } else {
+                    Err(TokenError::UnknownToken(token.clone()))    
+                }
+            },
+            _ => return Err(TokenError::UnknownToken(token.clone())),
+        }
+    }
 
+    let val = &tokens[1];
+    println!("{tokens:?}");
     if let Token::Integer(s) = val {
         let trap_mode = match s.as_str() {
             "x20" => TrapMode::Getc,
@@ -223,13 +232,11 @@ fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
             _ => return Err(TokenError::UnknownToken(val.clone())),
         };
 
-        return Ok(TrapNode::from(
-            Operation::Trap,
-            trap_mode,
-        ));
+
+        return Ok(TrapNode::from(Operation::Trap, trap_mode));
     }
 
-    return Err(TokenError::UnknownToken(val.clone()));
+    Err(TokenError::UnknownToken(val.clone()))
 }
 
 fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
@@ -244,16 +251,14 @@ fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
 
     let operand1 = convert_register(&tokens[1])?;
 
-    return Ok(JumpNode::from(
-        operation,
-        operand1,
-    ));
+    Ok(JumpNode::from(operation, operand1))
 }
 
 fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
-            "BR" | "BRz" | "BRp" | "BRn" => Operation::Br,
+            "BR" | "BRz" | "BRp" | "BRn" | "BRnz" | "BRnp" | "BRzn" | "BRzp" | "BRpz" | "BRpn"
+            | "BRnzp" | "BRnpz" | "BRpzn" | "BRpnz" | "BRznp" | "BRzpn" => Operation::Br,
             "JSR" => Operation::Jsr,
             _ => return Err(TokenError::UnknownToken(tokens[0].clone())),
         },
@@ -261,9 +266,7 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
     };
 
     let offset = match &tokens[1] {
-        Token::Label(s) => OffsetType::Label(LabelNode::from(
-            s.to_string(),
-        )),
+        Token::Label(s) => OffsetType::Label(LabelNode::from(s.to_string())),
         Token::Integer(i) => {
             let res = convert_integer(&tokens[1], 9)?;
             OffsetType::Integer(res)
@@ -271,5 +274,5 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
         _ => return Err(TokenError::UnknownToken(tokens[1].clone())),
     };
 
-    return Ok(IJumpNode::from(operation, offset));
+    Ok(IJumpNode::from(operation, offset))
 }

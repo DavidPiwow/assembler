@@ -14,6 +14,5 @@ fn main() {
 
     let res = tokenize(&contents);
 
-    println!("{:?}", res);
     println!("{:?}", scan_sequence(res));
 }
