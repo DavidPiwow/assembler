@@ -134,7 +134,11 @@ impl NotNode {
 
 impl LCNode for NotNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode: u16 = 0b1001 << 12;
+        let dr = (self.operand1.value as u16) << 9;
+        let sr = (self.operand2.value as u16) << 6;
+        let imm_field: u16 = 0b111111;
+        opcode | dr | sr | imm_field
     }
 }
 
