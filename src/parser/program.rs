@@ -10,13 +10,19 @@ pub type LabelMap = HashMap<String, u16>;
 pub struct Program {
     tree: NodeVec,
     labels: LabelMap,
+
+    binary: Vec<u16>,
 }
 
 impl Program {
     pub fn from(tree: NodeVec, labels: LabelMap) -> Self {
         Self {
-            tree, labels
+            tree, labels, binary: vec![],
         }
+    }
+
+    pub fn to_binary(&mut self) {
+        
     }
 }
 
@@ -28,3 +34,4 @@ impl fmt::Debug for Program {
         write!(f, "{:?}", self.labels)
     }
 }
+

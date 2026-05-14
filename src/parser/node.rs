@@ -71,19 +71,23 @@ pub enum OffsetType {
 #[derive(Debug)]
 pub struct LabelNode {
     label: String,
+    location: Option<u16>,
 }
 
 impl LabelNode {
     pub fn from(label: String) -> Self {
-        Self { label }
+        Self { label, location: None }
+    }
+
+    pub fn update_loc(&mut self, location: u16) {
+        self.location = Some(location);
+    }
+
+    pub fn to_binary() {
+
     }
 }
 
-impl LCNode for LabelNode {
-    fn to_binary(&self) -> u16 {
-        todo!()
-    }
-}
 
 #[derive(Debug)]
 pub struct ArithmeticNode {

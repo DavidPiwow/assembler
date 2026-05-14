@@ -1,6 +1,7 @@
 use std::{fs::File, io::Read};
 
 mod parser;
+mod cpu;
 
 use parser::scanner::tokenize;
 
