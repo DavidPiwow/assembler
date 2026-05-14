@@ -115,7 +115,23 @@ impl ArithmeticNode {
 
 impl LCNode for ArithmeticNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode = match self.operation {
+            Operation::Add => 0b0001 << 12,
+            Operation::And => 0b0101 << 12,
+            _ => unreachable!()
+        };
+
+        let dr = (self.operand1.value as u16) << 9;
+        let sr1 = (self.operand1.value as u16) << 6;
+
+        match &self.operand3 {
+            ArithmeticOperand::Register(sr2) => {
+                opcode | dr | sr1 | (sr2.value as u16)
+            }
+            ArithmeticOperand::Integer(imm) => {
+                opcode | dr | sr1 | (0b1 << 5) | (imm.value as u16) & ((0b1 << 5) - 1)
+            }
+        }
     }
 }
 
@@ -138,7 +154,11 @@ impl NotNode {
 
 impl LCNode for NotNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode: u16 = 0b1001 << 12;
+        let dr = (self.operand1.value as u16) << 9;
+        let sr = (self.operand2.value as u16) << 6;
+        let imm_field: u16 = 0b111111;
+        opcode | dr | sr | imm_field
     }
 }
 
@@ -168,7 +188,16 @@ impl MemOpNode {
 
 impl LCNode for MemOpNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode = match self.operation {
+            Operation::Ldr => 0b0110 << 12,
+            Operation::Str => 0b0111 << 12,
+            _ => unreachable!(),
+        };
+        let dr = (self.operand1.value as u16) << 9;
+        let base_r = (self.operand2.value as u16) << 6;
+        let offset6 = (self.offset.value as u16) & ((0b1 << 6) - 1);
+
+        opcode | dr | base_r | offset6
     }
 }
 
@@ -191,7 +220,24 @@ impl IMemOpNode {
 
 impl LCNode for IMemOpNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode = match self.operation {
+            Operation::Ld => 0b0010 << 12,
+            Operation::St => 0b0011 << 12,
+            Operation::Ldi => 0b1010 << 12,
+            Operation::Sti => 0b1011 << 12,
+            Operation::Lea => 0b1110 << 12,
+            _ => unreachable!(),
+        };
+        let dr = (self.operand1.value as u16) << 9;
+
+        let offset9 = match &self.offset {
+            OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 9) - 1),
+            OffsetType::Label(label) => {
+                todo!()
+            }
+        };
+
+        opcode | dr | offset9
     }
 }
 
@@ -209,7 +255,16 @@ impl TrapNode {
 
 impl LCNode for TrapNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        let opcode = 0b1111 << 12;
+        let vector: u16 = match self.val {
+            TrapMode::Getc => 0x20,
+            TrapMode::Out => 0x21,
+            TrapMode::Puts => 0x22,
+            TrapMode::In => 0x23,
+            TrapMode::Halt => 0x25,
+        };
+
+        opcode | vector
     }
 }
 
