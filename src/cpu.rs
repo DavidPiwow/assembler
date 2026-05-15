@@ -199,6 +199,7 @@ impl CPU {
 
 
             0b1111 => { // TRAP
+                self.mcr = 0;
             }
             0b1000 => { // RTI
 
