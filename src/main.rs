@@ -1,41 +1,28 @@
-use std::{fs::File, io::Read};
+use eframe::egui;
 
-mod parser;
+mod app;
+use app::LC3App;
+
 mod cpu;
+mod parser;
+mod views;
 
-use parser::scanner::tokenize;
-
-use parser::syntax_tree::scan_sequence;
-
-use crate::cpu::CPU;
 
 fn main() {
-    let file = File::open("./code.asm");
-    let mut contents = String::new();
 
-    file.unwrap().read_to_string(&mut contents);
+    // window settings
+    let window_options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1200.0, 800.0]),  
+        ..Default::default()    
+    };
 
-    let res = tokenize(&contents);
+    // open the window
+    eframe::run_native(
+        "LC-3 Tools",         
+        window_options, 
 
-    println!("{:?}", scan_sequence(res));
-
-
-    let mut test_cpu = CPU::default();
-
-    let program = [0x1023, 0x1265, 0x1642, 0x98FF, 0xB801, 0,10];
-    test_cpu.set_program(&program);
-
-    
-    println!("{:?}", test_cpu.view_registers());
-    println!("{:?}", test_cpu.view_memory_slice(0,11));
-    
-
-    for _ in program {
-        test_cpu.step();
-        println!("{:?}", test_cpu.view_registers());
-    }
-    
-   
-    println!("{:?}", test_cpu.view_memory_slice(0,11));
-
+        // when the app open, egui runs it 
+        Box::new(|_cc| Box::new(LC3App::new())),  // Box puts data on the heap
+    );
 }
