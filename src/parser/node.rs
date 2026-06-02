@@ -311,14 +311,23 @@ impl IJumpNode {
 
 impl LCNode for IJumpNode {
     fn to_binary(&self) -> u16 {
-        let opcode = 0b0100 << 12;
-        let bit = 1 << 11;
-        let offset11 = match &self.offset {
-            OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 11) - 1),
-            OffsetType::Label(label) => {todo!()}
-        };
-
-        opcode | bit | offset11
+        match self.operation {
+            Operation::Br => {
+                let opcode = 0b0100 << 12;
+                todo!()
+                // opcode | nzp | offset11
+            },
+            Operation::Jsrr => {
+                let opcode = 0b0100 << 12;
+                let bit = 1 << 11;
+                let offset11 = match &self.offset {
+                    OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 11) - 1),
+                    OffsetType::Label(label) => { todo!() }
+                };
+                opcode | bit | offset11
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
