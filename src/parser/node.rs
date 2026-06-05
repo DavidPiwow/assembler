@@ -72,7 +72,7 @@ pub enum OffsetType {
 #[derive(Debug)]
 pub struct LabelNode {
     label: String,
-    location: Option<u16>,
+    location: Option<i16>,
 }
 
 impl LabelNode {
@@ -85,7 +85,7 @@ impl LabelNode {
     }
 
     pub fn to_binary() {
-
+        todo!()
     }
 }
 
@@ -229,7 +229,7 @@ impl LCNode for IMemOpNode {
             Operation::Lea => 0b1110 << 12,
             _ => unreachable!(),
         };
-        let dr = (self.operand1.value as u16) << 9;
+        let reg = (self.operand1.value as u16) << 9;
 
         let offset9 = match &self.offset {
             OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 9) - 1),
@@ -238,7 +238,7 @@ impl LCNode for IMemOpNode {
             }
         };
 
-        opcode | dr | offset9
+        opcode | reg | offset9
     }
 }
 
@@ -287,7 +287,14 @@ impl JumpNode {
 
 impl LCNode for JumpNode {
     fn to_binary(&self) -> u16 {
-        todo!()                         // not implemented - throw error 
+        let opcode = match self.operation {
+            Operation::Jmp => 0b1100 << 12,
+            Operation::Jsrr => 0b0100 << 12,
+            _ => unreachable!(),
+        };
+        let base_r = (self.operand1.value as u16) << 6;
+
+        opcode | base_r
     }
 }
 
@@ -305,7 +312,23 @@ impl IJumpNode {
 
 impl LCNode for IJumpNode {
     fn to_binary(&self) -> u16 {
-        todo!()                         // not implemented - throw error 
+        match self.operation {
+            Operation::Br => {
+                let opcode = 0b0100 << 12;
+                todo!()
+                // opcode | nzp | offset11
+            },
+            Operation::Jsrr => {
+                let opcode = 0b0100 << 12;
+                let bit = 1 << 11;
+                let offset11 = match &self.offset {
+                    OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 11) - 1),
+                    OffsetType::Label(label) => { todo!() }
+                };
+                opcode | bit | offset11
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -322,7 +345,8 @@ impl RetNode {
 
 impl LCNode for RetNode {
     fn to_binary(&self) -> u16 {
-        todo!()                     // not implemented - throw error 
+        let instruction = 0b1100000111000000;
+        instruction
     }
 }
 
@@ -339,6 +363,8 @@ impl RtiNode {
 
 impl LCNode for RtiNode {
     fn to_binary(&self) -> u16 {
-        todo!()                 // not implemented - throw error 
+        let instruction = 0b1000000000000000;
+        instruction
     }
 }
+
