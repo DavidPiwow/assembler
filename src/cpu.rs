@@ -198,7 +198,7 @@ impl CPU {
             } 
 
 
-            0b1111 => { // TRAP
+            0b1111 => { // TRAP    // look here (halt)
                 self.mcr = 0;
             }
             0b1000 => { // RTI
@@ -348,6 +348,10 @@ impl CPU {
             self.memory[i] = *v;
             i+=1;
         }
+    }
+    
+    pub fn view_mcr(&self) ->u16 {
+        self.mcr
     }
 
 }

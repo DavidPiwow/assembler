@@ -7,7 +7,7 @@ pub fn draw(ui: &mut egui::Ui, cpu: &CPU) {
 
     // memory window
     let start: usize = pc.saturating_sub(5);         // start 5 addresses before PC
-    let end = (pc + 20).min(0xFFFE);         // end 20 addresses after PC (caps at 2^16)
+    let end = (pc + 20).min(0xFFFE);         // end 20 addresses after PC (caps at (2^16)-1)
 
     // get that slice of memory from the CPU
     let memory = cpu.view_memory_slice(start, end);
