@@ -80,7 +80,7 @@ impl LabelNode {
         Self { label, location: None }
     }
 
-    pub fn update_loc(&mut self, location: u16) {
+    pub fn update_loc(&mut self, location: i16) {
         self.location = Some(location);
     }
 
