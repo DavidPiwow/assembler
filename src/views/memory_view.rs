@@ -3,10 +3,10 @@ use crate::cpu::CPU;
 
 pub fn draw(ui: &mut egui::Ui, cpu: &CPU) {
     ui.heading("Memory");
-    let pc = cpu.view_pc() as usize;
+    let pc: usize = cpu.view_pc() as usize;
 
     // show 5 rows before the PC and 20 rows after
-    let start = pc.saturating_sub(5);   // saturating_sub means: don't go below 0
+    let start: usize = pc.saturating_sub(5);   // saturating_sub means: don't go below 0
     let end = (pc + 20).min(0xFFFE);    // 2^16 (prevent going past end of memory)
 
     // get that slice of memory from the CPU
