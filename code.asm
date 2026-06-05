@@ -8,7 +8,6 @@ AND R6, R6, #0 ; 'C'
 LDR R4, R3, #0 ; load 'A'
 LDR R5, R3, #1 ; load 'B'
 LOOP
-
 ADD R6, R6, R4  ; 'C' += 'A'
 
 ADD R5, R5, #-1 ; while 'B' > 0

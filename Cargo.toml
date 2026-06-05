@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+eframe = "0.24"
+egui = "0.34.3"
+rfd = "0.14"
+[target.'cfg(any(target_os = "windows"))'.dependencies]
+winapi = { version = "0.3.9", features = ["winuser"] }

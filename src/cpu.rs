@@ -1,3 +1,4 @@
+// Do not touch, David's
 pub struct CPU {
     ir: u16,  // instruction register (actual instruction data)
     mdr: u16, // memory data    register (data  to read/write)
@@ -348,6 +349,10 @@ impl CPU {
             self.memory[i] = *v;
             i+=1;
         }
+    }
+
+    pub fn view_mcr(&self) -> u16 {
+        self.mcr
     }
 
 }

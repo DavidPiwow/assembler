@@ -1,3 +1,5 @@
+// Do not touch, David's
+
 use std::{error::Error, fmt};
 
 #[derive(Debug, Clone)]
@@ -14,6 +16,7 @@ pub enum TokenError {
     OutOfBounds(String),
     UnknownRegister(String),
     UnknownToken(Token),
+    EmptyProgram,
 }
 
 impl Error for TokenError {}
@@ -29,6 +32,7 @@ impl fmt::Display for TokenError {
             }
 
             TokenError::UnknownToken(token) => write!(f, "{token:?} was not expected here"),
+            TokenError::EmptyProgram => write!(f, "Program file is empty!")
         }
     }
 }
@@ -105,8 +109,10 @@ pub fn tokenize(text: &str) -> Vec<Token> {
         string_pos += 1;
     }
 
+
     if !char_stack.is_empty() {
-        if char_stack.len() >= 2 {
+        
+        if char_stack.len() == 2 {
             if char_stack[0] == 'R' && char_stack[1].is_numeric() {
                 tokens.push(Token::Register(char_stack.iter().collect()));
             }

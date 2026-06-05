@@ -1,5 +1,6 @@
-use std::fmt::Debug;
+// Do not touch, David's
 
+use std::fmt::Debug;
 
 pub trait LCNode: Debug {
     fn to_binary(&self) -> u16;
@@ -122,7 +123,7 @@ impl LCNode for ArithmeticNode {
         };
 
         let dr = (self.operand1.value as u16) << 9;
-        let sr1 = (self.operand1.value as u16) << 6;
+        let sr1 = (self.operand2.value as u16) << 6;
 
         match &self.operand3 {
             ArithmeticOperand::Register(sr2) => {
@@ -233,7 +234,7 @@ impl LCNode for IMemOpNode {
         let offset9 = match &self.offset {
             OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 9) - 1),
             OffsetType::Label(label) => {
-                todo!()
+                todo!()                         // not implemented - throw error 
             }
         };
 
@@ -286,7 +287,7 @@ impl JumpNode {
 
 impl LCNode for JumpNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        todo!()                         // not implemented - throw error 
     }
 }
 
@@ -304,7 +305,7 @@ impl IJumpNode {
 
 impl LCNode for IJumpNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        todo!()                         // not implemented - throw error 
     }
 }
 
@@ -321,7 +322,7 @@ impl RetNode {
 
 impl LCNode for RetNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        todo!()                     // not implemented - throw error 
     }
 }
 
@@ -338,6 +339,6 @@ impl RtiNode {
 
 impl LCNode for RtiNode {
     fn to_binary(&self) -> u16 {
-        todo!()
+        todo!()                 // not implemented - throw error 
     }
 }
