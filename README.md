@@ -26,5 +26,6 @@ LC-3 Tools Rewrite using Rust
 
 
 ## Credits
-  David & Safa wrote the CPU/assembler
-  Sneha & Daniel wrote the app logic
+  David & Safa (@saftah) - CPU and assembler  
+  sneha (@snh-roy) - Frontend GUI implementation, assembler integration  
+  Matthew (@matt-s3190) - Text editor widget for program input
