@@ -259,8 +259,13 @@ fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
 fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
-            "BR" | "BRz" | "BRp" | "BRn" | "BRnz" | "BRnp" | "BRzn" | "BRzp" | "BRpz" | "BRpn"
-            | "BRnzp" | "BRnpz" | "BRpzn" | "BRpnz" | "BRznp" | "BRzpn" => Operation::Br,
+            "BR" | "BRnzp" | "BRnpz" | "BRpzn" | "BRpnz" | "BRznp" | "BRzpn" => Operation::Br,
+            "BRz" => Operation::Brz,
+            "BRn" => Operation::Brn,
+            "BRp" => Operation::Brp,
+            "BRnp" | "BRpn" => Operation::Brpn,
+            "BRzp" | "BRpz" => Operation::Brpz,
+            "BRnz" | "BRzn" => Operation::Brnz,
             "JSR" => Operation::Jsr,
             _ => return Err(TokenError::UnknownToken(tokens[0].clone())),
         },

@@ -48,9 +48,10 @@ impl CPU {
         let z = self.nzp >> 1 & 1;
         let p = self.nzp & 1;
 
-        let ir_11 = ((self.ir & 0x400) >> 10) as u8;
-        let ir_10 = ((self.ir & 0x200) >> 9) as u8;
-        let ir_9 = ((self.ir & 0x100) >> 8) as u8;
+        let ir_11 = ((self.ir & 0x800) >> 11) as u8;
+        let ir_10 = ((self.ir & 0x400) >> 10) as u8;
+        let ir_9 = ((self.ir & 0x200) >> 9) as u8;
+
 
         self.ben = (ir_11 & n | ir_10 & z | ir_9 & p) > 0;
     }
@@ -258,6 +259,8 @@ impl CPU {
         let ex_imm = sign_extend(imm, 5);
 
         let val = sr1 as i16 + ex_imm;
+
+        
         self.set_nzp(val);
         
         self.registers[dr as  usize] = val as u16;
@@ -271,6 +274,7 @@ impl CPU {
         let ex_imm = sign_extend(imm, 5);
 
         let val = sr1 as i16 & ex_imm;
+        
         self.set_nzp(val);
         
         self.registers[dr as  usize] = val as u16;
@@ -353,6 +357,14 @@ impl CPU {
 
     pub fn view_mcr(&self) -> u16 {
         self.mcr
+    }
+
+    pub fn view_nzp(&self) -> u8 {
+        self.nzp
+    }
+
+    pub fn view_ben(&self) -> bool {
+        self.ben
     }
 
 }

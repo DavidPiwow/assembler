@@ -2,8 +2,11 @@
 
 use std::fmt::Debug;
 
+
 pub trait LCNode: Debug {
     fn to_binary(&self) -> u16;
+    fn get_label_name(&self) -> Option<&String>;
+    fn init_label(&mut self, offset: i16);
 }
 
 #[derive(Debug)]
@@ -11,6 +14,12 @@ pub enum Operation {
     Add,
     And,
     Br,
+    Brp,
+    Brn,
+    Brz,
+    Brpn,
+    Brpz,
+    Brnz,
     Jmp,
     Jsr,
     Jsrr,
@@ -134,6 +143,14 @@ impl LCNode for ArithmeticNode {
             }
         }
     }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
+    }
 }
 
 #[derive(Debug)]
@@ -160,6 +177,15 @@ impl LCNode for NotNode {
         let sr = (self.operand2.value as u16) << 6;
         let imm_field: u16 = 0b111111;
         opcode | dr | sr | imm_field
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
     }
 }
 
@@ -200,6 +226,15 @@ impl LCNode for MemOpNode {
 
         opcode | dr | base_r | offset6
     }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
+    }
 }
 
 #[derive(Debug)]
@@ -232,13 +267,26 @@ impl LCNode for IMemOpNode {
         let reg = (self.operand1.value as u16) << 9;
 
         let offset9 = match &self.offset {
-            OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 9) - 1),
+            OffsetType::Integer(imm) => (imm.value as i16) & ((0b1 << 9) - 1),
             OffsetType::Label(label) => {
-                todo!()                         // not implemented - throw error 
+                (label.location.unwrap() as i16) & ((0b1 << 9) - 1)                       // not implemented - throw error 
             }
-        };
+        } as u16;
 
         opcode | reg | offset9
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        match &self.offset {
+            OffsetType::Integer(_) => None,
+            OffsetType::Label(l) => Some(&l.label)
+        }
+    }
+
+    fn init_label(&mut self, offset: i16) {
+        if let OffsetType::Label(label) = &mut self.offset {
+            label.location = Some(offset)
+        }
     }
 }
 
@@ -266,6 +314,15 @@ impl LCNode for TrapNode {
         };
 
         opcode | vector
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
     }
 }
 
@@ -296,6 +353,15 @@ impl LCNode for JumpNode {
 
         opcode | base_r
     }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
+    }
 }
 
 #[derive(Debug)]
@@ -313,21 +379,54 @@ impl IJumpNode {
 impl LCNode for IJumpNode {
     fn to_binary(&self) -> u16 {
         match self.operation {
-            Operation::Br => {
-                let opcode = 0b0100 << 12;
-                todo!()
-                // opcode | nzp | offset11
+            Operation::Br | Operation::Brn | Operation::Brnz | Operation::Brp | Operation::Brpn |
+            Operation::Brpz | Operation::Brz => {
+                let opcode = 0b0000 << 12;
+                let nzp = match self.operation {
+                    Operation::Br => 0b111,
+                    Operation::Brn => 0b100,
+                    Operation::Brz => 0b010,
+                    Operation::Brp => 0b001,
+                    Operation::Brnz => 0b110,
+                    Operation::Brpn => 0b101,
+                    Operation::Brpz => 0b011,
+                    _ => unreachable!()
+                } << 9;
+
+                let offset9 = match &self.offset {
+                    OffsetType::Integer(imm) => (imm.value) & ((0b1 << 9) - 1),
+                    OffsetType::Label(label) => { (label.location.unwrap() as i16) & ((0b1 << 9) - 1)}
+                } as u16;
+
+
+
+                
+                opcode | nzp | offset9
             },
             Operation::Jsrr => {
                 let opcode = 0b0100 << 12;
                 let bit = 1 << 11;
                 let offset11 = match &self.offset {
-                    OffsetType::Integer(imm) => (imm.value as u16) & ((0b1 << 11) - 1),
-                    OffsetType::Label(label) => { todo!() }
-                };
+                    OffsetType::Integer(imm) => (imm.value) & ((0b1 << 11) - 1),
+                    OffsetType::Label(label) => { (label.location.unwrap() as i16) & ((0b1 << 11) - 1)}
+                } as u16;
                 opcode | bit | offset11
             }
             _ => unreachable!(),
+        }
+    }
+
+     fn get_label_name(&self) -> Option<&String> {
+        match &self.offset {
+            OffsetType::Integer(_) => None,
+            OffsetType::Label(l) => Some(&l.label)
+        }
+    }
+
+
+    fn init_label(&mut self, offset: i16) {
+        if let OffsetType::Label(label) = &mut self.offset {
+            label.location = Some(offset)
         }
     }
 }
@@ -341,12 +440,22 @@ impl RetNode {
     pub fn from(operation: Operation) -> Self {
         Self { operation }
     }
+    
 }
 
 impl LCNode for RetNode {
     fn to_binary(&self) -> u16 {
         let instruction = 0b1100000111000000;
         instruction
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
     }
 }
 
@@ -365,6 +474,14 @@ impl LCNode for RtiNode {
     fn to_binary(&self) -> u16 {
         let instruction = 0b1000000000000000;
         instruction
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+    fn init_label(&mut self, _: i16) {
+        unreachable!()
     }
 }
 

@@ -3,7 +3,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::parser::node::LCNode;
+use crate::parser::node::{LCNode, Operation};
 
 
 pub type NodeVec = Vec<Box<dyn LCNode>>;
@@ -25,8 +25,21 @@ impl Program {
 
     pub fn to_binary(&mut self) {
         self.binary.clear();
-        for node in &self.tree {
+        let mut instr_pos = 0;
+
+        for node in &mut self.tree {
+            let n = node.as_mut();
+            let name = n.get_label_name();
+
+            if name.is_some() {
+                let label_location = self.labels.get(name.unwrap());
+                if label_location.is_some() {
+                    n.init_label(*label_location.unwrap() as i16 - (instr_pos+1));
+                }
+            }
+
             self.binary.push(node.to_binary());
+            instr_pos += 1;
         }
     }
     
