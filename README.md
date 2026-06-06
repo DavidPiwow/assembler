@@ -23,3 +23,8 @@ LC-3 Tools Rewrite using Rust
   - No syntax highlighting
   - Multiple program view
   - No way to convert from binary to instruction
+
+
+## Credits
+  David & Safa wrote the CPU/assembler
+  Sneha & Daniel wrote the app logic
