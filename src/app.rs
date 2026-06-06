@@ -1,5 +1,4 @@
 use eframe::egui;
-use rfd::MessageButtons::Ok;
 use crate::cpu::CPU;
 use crate::parser::scanner::TokenError;
 use crate::parser::{scanner, syntax_tree};

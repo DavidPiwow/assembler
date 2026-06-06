@@ -18,7 +18,7 @@ fn main() {
     };
 
     // open the window
-    eframe::run_native(
+    let _ = eframe::run_native(
         "LC-3 Tools",         
         window_options, 
 

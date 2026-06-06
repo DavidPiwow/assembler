@@ -274,7 +274,7 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
 
     let offset = match &tokens[1] {
         Token::Label(s) => OffsetType::Label(LabelNode::from(s.to_string())),
-        Token::Integer(i) => {
+        Token::Integer(_) => {
             let res = convert_integer(&tokens[1], 9)?;
             OffsetType::Integer(res)
         }

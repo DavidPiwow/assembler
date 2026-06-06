@@ -1,4 +1,7 @@
 // Do not touch, David's
+
+
+#[allow(unused)]
 pub struct CPU {
     ir: u16,  // instruction register (actual instruction data)
     mdr: u16, // memory data    register (data  to read/write)
@@ -19,6 +22,8 @@ fn sign_extend(val: u16, bits: usize) -> i16 {
     (val << (16 - bits)) as i16 >> (16 - bits)
 }
 
+
+#[allow(unused)]
 impl CPU {
     fn fetch(&mut self) {
         self.mar = self.pc;
@@ -333,6 +338,7 @@ impl CPU {
         &self.memory[start..end]
     }
 
+    
     pub fn view_all_memory(&self) -> &[u16] {
         &self.memory
     }

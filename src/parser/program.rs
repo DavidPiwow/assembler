@@ -3,7 +3,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::parser::node::{LCNode, Operation};
+use crate::parser::node::LCNode;
 
 
 pub type NodeVec = Vec<Box<dyn LCNode>>;

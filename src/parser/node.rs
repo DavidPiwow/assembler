@@ -2,13 +2,14 @@
 
 use std::fmt::Debug;
 
-
 pub trait LCNode: Debug {
     fn to_binary(&self) -> u16;
     fn get_label_name(&self) -> Option<&String>;
     fn init_label(&mut self, offset: i16);
 }
 
+
+#[allow(unused)]
 #[derive(Debug)]
 pub enum Operation {
     Add,
@@ -28,7 +29,7 @@ pub enum Operation {
     Ldr,
     Lea,
     Not,
-    Ret, 
+    Ret,
     Rti,
     St,
     Sti,
@@ -86,18 +87,12 @@ pub struct LabelNode {
 
 impl LabelNode {
     pub fn from(label: String) -> Self {
-        Self { label, location: None }
-    }
-
-    pub fn update_loc(&mut self, location: i16) {
-        self.location = Some(location);
-    }
-
-    pub fn to_binary() {
-        todo!()
+        Self {
+            label,
+            location: None,
+        }
     }
 }
-
 
 #[derive(Debug)]
 pub struct ArithmeticNode {
@@ -128,16 +123,14 @@ impl LCNode for ArithmeticNode {
         let opcode = match self.operation {
             Operation::Add => 0b0001 << 12,
             Operation::And => 0b0101 << 12,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         let dr = (self.operand1.value as u16) << 9;
         let sr1 = (self.operand2.value as u16) << 6;
 
         match &self.operand3 {
-            ArithmeticOperand::Register(sr2) => {
-                opcode | dr | sr1 | (sr2.value as u16)
-            }
+            ArithmeticOperand::Register(sr2) => opcode | dr | sr1 | (sr2.value as u16),
             ArithmeticOperand::Integer(imm) => {
                 opcode | dr | sr1 | (0b1 << 5) | (imm.value as u16) & ((0b1 << 5) - 1)
             }
@@ -153,6 +146,8 @@ impl LCNode for ArithmeticNode {
     }
 }
 
+
+#[allow(unused)]
 #[derive(Debug)]
 pub struct NotNode {
     operation: Operation,
@@ -182,7 +177,6 @@ impl LCNode for NotNode {
     fn get_label_name(&self) -> Option<&String> {
         None
     }
-
 
     fn init_label(&mut self, _: i16) {
         unreachable!()
@@ -231,7 +225,6 @@ impl LCNode for MemOpNode {
         None
     }
 
-
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
@@ -269,7 +262,7 @@ impl LCNode for IMemOpNode {
         let offset9 = match &self.offset {
             OffsetType::Integer(imm) => (imm.value as i16) & ((0b1 << 9) - 1),
             OffsetType::Label(label) => {
-                (label.location.unwrap() as i16) & ((0b1 << 9) - 1)                       // not implemented - throw error 
+                (label.location.unwrap() as i16) & ((0b1 << 9) - 1) // not implemented - throw error 
             }
         } as u16;
 
@@ -279,7 +272,7 @@ impl LCNode for IMemOpNode {
     fn get_label_name(&self) -> Option<&String> {
         match &self.offset {
             OffsetType::Integer(_) => None,
-            OffsetType::Label(l) => Some(&l.label)
+            OffsetType::Label(l) => Some(&l.label),
         }
     }
 
@@ -290,6 +283,8 @@ impl LCNode for IMemOpNode {
     }
 }
 
+
+#[allow(unused)]
 #[derive(Debug)]
 pub struct TrapNode {
     operation: Operation,
@@ -320,12 +315,10 @@ impl LCNode for TrapNode {
         None
     }
 
-
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
 }
-
 
 #[derive(Debug)]
 pub struct JumpNode {
@@ -358,7 +351,6 @@ impl LCNode for JumpNode {
         None
     }
 
-
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
@@ -379,8 +371,13 @@ impl IJumpNode {
 impl LCNode for IJumpNode {
     fn to_binary(&self) -> u16 {
         match self.operation {
-            Operation::Br | Operation::Brn | Operation::Brnz | Operation::Brp | Operation::Brpn |
-            Operation::Brpz | Operation::Brz => {
+            Operation::Br
+            | Operation::Brn
+            | Operation::Brnz
+            | Operation::Brp
+            | Operation::Brpn
+            | Operation::Brpz
+            | Operation::Brz => {
                 let opcode = 0b0000 << 12;
                 let nzp = match self.operation {
                     Operation::Br => 0b111,
@@ -390,25 +387,24 @@ impl LCNode for IJumpNode {
                     Operation::Brnz => 0b110,
                     Operation::Brpn => 0b101,
                     Operation::Brpz => 0b011,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 } << 9;
 
                 let offset9 = match &self.offset {
                     OffsetType::Integer(imm) => (imm.value) & ((0b1 << 9) - 1),
-                    OffsetType::Label(label) => { (label.location.unwrap() as i16) & ((0b1 << 9) - 1)}
+                    OffsetType::Label(label) => (label.location.unwrap() as i16) & ((0b1 << 9) - 1),
                 } as u16;
 
-
-
-                
                 opcode | nzp | offset9
-            },
+            }
             Operation::Jsrr => {
                 let opcode = 0b0100 << 12;
                 let bit = 1 << 11;
                 let offset11 = match &self.offset {
                     OffsetType::Integer(imm) => (imm.value) & ((0b1 << 11) - 1),
-                    OffsetType::Label(label) => { (label.location.unwrap() as i16) & ((0b1 << 11) - 1)}
+                    OffsetType::Label(label) => {
+                        (label.location.unwrap() as i16) & ((0b1 << 11) - 1)
+                    }
                 } as u16;
                 opcode | bit | offset11
             }
@@ -416,13 +412,12 @@ impl LCNode for IJumpNode {
         }
     }
 
-     fn get_label_name(&self) -> Option<&String> {
+    fn get_label_name(&self) -> Option<&String> {
         match &self.offset {
             OffsetType::Integer(_) => None,
-            OffsetType::Label(l) => Some(&l.label)
+            OffsetType::Label(l) => Some(&l.label),
         }
     }
-
 
     fn init_label(&mut self, offset: i16) {
         if let OffsetType::Label(label) = &mut self.offset {
@@ -431,16 +426,20 @@ impl LCNode for IJumpNode {
     }
 }
 
+
+#[allow(unused)]
 #[derive(Debug)]
 pub struct RetNode {
     operation: Operation,
 }
 
+
+
+#[allow(unused)]
 impl RetNode {
     pub fn from(operation: Operation) -> Self {
         Self { operation }
     }
-    
 }
 
 impl LCNode for RetNode {
@@ -453,16 +452,21 @@ impl LCNode for RetNode {
         None
     }
 
-
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
 }
 
+
+#[allow(unused)]
 #[derive(Debug)]
 pub struct RtiNode {
     operation: Operation,
 }
+
+
+
+#[allow(unused)]
 
 impl RtiNode {
     pub fn from(operation: Operation) -> Self {
@@ -484,4 +488,3 @@ impl LCNode for RtiNode {
         unreachable!()
     }
 }
-
