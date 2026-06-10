@@ -9,6 +9,8 @@ pub enum Token {
     Register(String),
     Integer(String),
     Directive(String),
+    String(String),
+    Block,
 }
 
 #[derive(Debug)]
@@ -17,6 +19,7 @@ pub enum TokenError {
     UnknownRegister(String),
     UnknownToken(Token),
     EmptyProgram,
+    MalformedInteger
 }
 
 impl Error for TokenError {}
@@ -32,7 +35,8 @@ impl fmt::Display for TokenError {
             }
 
             TokenError::UnknownToken(token) => write!(f, "{token:?} was not expected here"),
-            TokenError::EmptyProgram => write!(f, "Program file is empty!")
+            TokenError::EmptyProgram => write!(f, "Program file is empty!"),
+            TokenError::MalformedInteger => write!(f, "Program contains a malformed integer")
         }
     }
 }
@@ -53,13 +57,15 @@ fn is_seperator(c: char) -> bool {
     }
 }
 
-pub fn tokenize(text: &str) -> Vec<Token> {
+pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let chars = text.chars().collect::<Vec<char>>();
     let mut char_stack: Vec<char> = Vec::new();
     let mut tokens: Vec<Token> = Vec::new();
 
     let mut string_pos = 0;
     let mut cur_char;
+
+    let mut program_origin = 0;
 
     while string_pos < text.len() {
         cur_char = chars[string_pos];
@@ -89,9 +95,36 @@ pub fn tokenize(text: &str) -> Vec<Token> {
             } else if char_stack[0] == '.' {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
                 if let Token::Directive(s) = &tokens[tokens.len() - 1] {
-                    if s == ".END" {
-                        char_stack.clear();
-                        break;
+                    match s.as_str() {
+                        ".FILL" => {},
+                        ".STRINGZ" => {},
+                        ".END" => {
+                            char_stack.clear();
+                            break;
+                        }
+                        ".BLKW" => {
+                            string_pos += 1;
+                            while chars[string_pos] == ' ' {
+                                string_pos += 1;
+                            }
+                            let mut count_end = string_pos + 1;
+                            while !chars[count_end].is_whitespace() {
+                                count_end += 1;
+                            }
+
+                            let amount: Result<u16, std::num::ParseIntError> = text[string_pos..count_end].parse::<u16>();
+                            if let Ok(v) = amount {
+                                for i in 0..v {
+                                    tokens.push(Token::Block)
+                                }
+                            } else {
+                                return Err(TokenError::MalformedInteger);
+                            }
+                        }
+
+                        _ => {
+
+                        }
                     }
                 }
             } else {
@@ -131,7 +164,7 @@ pub fn tokenize(text: &str) -> Vec<Token> {
         char_stack.clear();
     }
 
-    tokens
+    Ok(tokens)
 }
 
 fn find_opcode(chars: &[char]) -> Option<Token> {

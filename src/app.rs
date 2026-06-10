@@ -31,7 +31,7 @@ impl LC3App {
             return Err(TokenError::EmptyProgram);
         }
         
-        let tokens: Vec<scanner::Token> = scanner::tokenize(&self.source_text);
+        let tokens: Vec<scanner::Token> = scanner::tokenize(&self.source_text)?;
 
         // parser taken tokens ->  program
         let mut program =  syntax_tree::scan_sequence(tokens)?;

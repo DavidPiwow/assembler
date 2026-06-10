@@ -1,6 +1,5 @@
 // Do not touch, David's
 
-
 #[allow(unused)]
 pub struct CPU {
     ir: u16,  // instruction register (actual instruction data)
@@ -15,6 +14,10 @@ pub struct CPU {
     interrupt: bool,
     ben: bool,
     nzp: u8, // 00000nzp
+
+    s_pointer: usize, // supervisor stack
+
+    us_pointer: usize,
 }
 
 #[inline(always)]
@@ -22,13 +25,12 @@ fn sign_extend(val: u16, bits: usize) -> i16 {
     (val << (16 - bits)) as i16 >> (16 - bits)
 }
 
-
 #[allow(unused)]
 impl CPU {
     fn fetch(&mut self) {
         self.mar = self.pc;
         self.pc += 1;
-        
+
         /*self.acv = self.mar < 0x3000 || self.mar >= 0xf300 && (self.psr & 0x4000) > 0;
 
         if self.interrupt {
@@ -57,13 +59,11 @@ impl CPU {
         let ir_10 = ((self.ir & 0x400) >> 10) as u8;
         let ir_9 = ((self.ir & 0x200) >> 9) as u8;
 
-
         self.ben = (ir_11 & n | ir_10 & z | ir_9 & p) > 0;
     }
 
-    // there are three different register positions 
+    // there are three different register positions
     // so u know what
-
 
     fn get_reg1(&self) -> u16 {
         let reg_mask = 0b111 << 9;
@@ -93,8 +93,6 @@ impl CPU {
         self.registers[reg as usize]
     }
 
-
-
     fn set_nzp(&mut self, val: i16) {
         self.nzp = 0;
         if val == 0 {
@@ -104,14 +102,13 @@ impl CPU {
         } else {
             self.nzp = 0b100;
         }
-    } 
-
+    }
 
     fn decode(&mut self) {
         let opcode: u8 = ((self.ir & 0xF000) >> 12) as u8;
         match opcode {
-            
-            0b0001 => { // ADD
+            0b0001 => {
+                // ADD
                 let i_mode = self.ir & 0x20;
                 if i_mode > 0 {
                     self.execute_add_imm();
@@ -119,7 +116,8 @@ impl CPU {
                     self.execute_add_reg();
                 }
             }
-            0b0101 => { // AND
+            0b0101 => {
+                // AND
                 let i_mode = self.ir & 0x20;
                 if i_mode > 0 {
                     self.execute_and_imm();
@@ -127,18 +125,21 @@ impl CPU {
                     self.execute_and_reg();
                 }
             }
-            0b0000 => { // BR
+            0b0000 => {
+                // BR
                 if !self.ben {
                     return;
                 }
                 self.evaluate_pc_relative_address();
                 self.pc = self.mar;
             }
-            0b1100 => { // JMP / RET
+            0b1100 => {
+                // JMP / RET
                 let val = self.get_reg2_val();
                 self.pc = val;
             }
-            0b0100 => { // JSR/JSRR
+            0b0100 => {
+                // JSR/JSRR
                 self.registers[7] = self.pc;
 
                 let i_mask = 1 << 11;
@@ -148,34 +149,36 @@ impl CPU {
                     let ex_imm = sign_extend(imm, 11);
 
                     self.pc = (self.pc as i16 + ex_imm) as u16;
-
                 } else {
                     let val = self.get_reg2_val();
                     self.pc = val;
                 }
             }
-            0b1001 => { // NOT
+            0b1001 => {
+                // NOT
                 self.execute_not();
-            }       
-            
+            }
 
-            0b0010 => { // LD
+            0b0010 => {
+                // LD
                 self.evaluate_pc_relative_address();
                 self.load_reg_from_memory();
             }
-            0b1010 => { // LDI
+            0b1010 => {
+                // LDI
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
                 self.load_reg_from_memory();
             }
-            0b0110 => { // LDR
+            0b0110 => {
+                // LDR
                 self.evalate_base_offset_address();
                 self.load_reg_from_memory();
             }
 
-
-            0b1110 => { // LEA
+            0b1110 => {
+                // LEA
                 let imm_mask = 0x1FF;
                 let imm = self.ir & imm_mask;
                 let ex_imm = sign_extend(imm, 9);
@@ -184,39 +187,71 @@ impl CPU {
 
                 let val = self.pc as i16 + ex_imm;
 
-                self.registers[reg as usize] = val as u16 
+                self.registers[reg as usize] = val as u16
             }
 
-
-            0b0011 => { // ST
+            0b0011 => {
+                // ST
                 self.evaluate_pc_relative_address();
                 self.store_reg_to_memory();
             }
 
-            0b1011 => { // STI
+            0b1011 => {
+                // STI
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
                 self.store_reg_to_memory();
             }
-            0b0111 => { // STR
+            0b0111 => {
+                // STR
                 self.evalate_base_offset_address();
                 self.store_reg_to_memory();
-            } 
+            }
 
-
-            0b1111 => { // TRAP
-                self.mcr = 0;
+            0b1111 => {
+                // TRAP
+                self.trap_routine();
             }
             0b1000 => { // RTI
-
-            },
+                self.return_from_trap();
+            }
             _ => {}
         }
     }
 
+    fn trap_routine(&mut self) {
+        self.pc += 1;
+        self.mdr = self.psr;
 
-    // these evaluate address functions will set mar 
+        let trap_vec = self.ir & 0xFF;
+
+        self.psr &= !0x8000; // clear bit 15
+
+        self.s_pointer -= 1;
+        self.memory[self.s_pointer as usize] = self.mdr;
+
+        self.s_pointer -= 1;
+        self.memory[self.s_pointer as usize] = self.pc - 1;
+
+        self.mdr = self.memory[trap_vec as usize];
+
+        self.pc = self.mdr;
+    }
+
+    fn return_from_trap(&mut self) {
+        self.mdr = self.memory[self.s_pointer as usize];
+        self.pc = self.mdr;
+
+        self.s_pointer += 1;
+        
+        self.mdr = self.memory[self.s_pointer as usize];
+        self.psr = self.mdr;
+
+        self.s_pointer += 1;
+    }
+
+    // these evaluate address functions will set mar
 
     // this is the same for indirect addressing
     fn evaluate_pc_relative_address(&mut self) {
@@ -237,7 +272,6 @@ impl CPU {
 
         self.mar = (reg_val as i16 + ex_imm) as u16;
     }
-
 
     // ld,ldr,ldi
 
@@ -265,10 +299,9 @@ impl CPU {
 
         let val = sr1 as i16 + ex_imm;
 
-        
         self.set_nzp(val);
-        
-        self.registers[dr as  usize] = val as u16;
+
+        self.registers[dr as usize] = val as u16;
     }
 
     fn execute_and_imm(&mut self) {
@@ -279,10 +312,10 @@ impl CPU {
         let ex_imm = sign_extend(imm, 5);
 
         let val = sr1 as i16 & ex_imm;
-        
+
         self.set_nzp(val);
-        
-        self.registers[dr as  usize] = val as u16;
+
+        self.registers[dr as usize] = val as u16;
     }
 
     fn execute_add_reg(&mut self) {
@@ -290,12 +323,12 @@ impl CPU {
 
         let sr1 = self.get_reg2_val() as i16;
         let sr2 = self.get_reg3_val() as i16;
-        
+
         let val = sr1 + sr2;
 
         self.set_nzp(val);
 
-        self.registers[dr as  usize] = val as u16;
+        self.registers[dr as usize] = val as u16;
     }
 
     fn execute_and_reg(&mut self) {
@@ -303,14 +336,14 @@ impl CPU {
 
         let sr1 = self.get_reg2_val() as i16;
         let sr2 = self.get_reg3_val() as i16;
-        
+
         let val = sr1 & sr2;
 
         self.set_nzp(val);
 
-        self.registers[dr as  usize] = val as u16;
+        self.registers[dr as usize] = val as u16;
     }
-    
+
     fn execute_not(&mut self) {
         let dr = self.get_reg1();
 
@@ -319,8 +352,6 @@ impl CPU {
 
         self.registers[dr as usize] = val as u16;
     }
-
-
 
     pub fn run(&mut self) {
         while (self.mcr & 0x8000) != 0 {
@@ -338,7 +369,6 @@ impl CPU {
         &self.memory[start..end]
     }
 
-    
     pub fn view_all_memory(&self) -> &[u16] {
         &self.memory
     }
@@ -357,7 +387,7 @@ impl CPU {
         let mut i = 0;
         for v in program {
             self.memory[i] = *v;
-            i+=1;
+            i += 1;
         }
     }
 
@@ -372,7 +402,6 @@ impl CPU {
     pub fn view_ben(&self) -> bool {
         self.ben
     }
-
 }
 
 impl Default for CPU {
@@ -390,6 +419,8 @@ impl Default for CPU {
             interrupt: false,
             ben: false,
             nzp: 0,
+            s_pointer: 0x3000,
+            us_pointer: 0xFDFF,
         }
     }
 }
