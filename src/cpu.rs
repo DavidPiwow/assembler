@@ -226,6 +226,8 @@ impl CPU {
 
         let trap_vec = self.ir & 0xFF;
 
+        
+
         self.psr &= !0x8000; // clear bit 15
 
         self.s_pointer -= 1;
@@ -235,8 +237,14 @@ impl CPU {
         self.memory[self.s_pointer as usize] = self.pc - 1;
 
         self.mdr = self.memory[trap_vec as usize];
+        println!("{}", self.mdr);
 
         self.pc = self.mdr;
+
+        if trap_vec == 0x25 {
+            self.mcr = 0;
+            return;
+        }
     }
 
     fn return_from_trap(&mut self) {
