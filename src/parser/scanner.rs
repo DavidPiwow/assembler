@@ -65,7 +65,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let mut string_pos = 0;
     let mut cur_char;
 
-    let mut program_origin = 0;
+    let mut _program_origin = 0;
 
     while string_pos < text.len() {
         cur_char = chars[string_pos];
@@ -114,7 +114,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
 
                             let amount: Result<u16, std::num::ParseIntError> = text[string_pos..count_end].parse::<u16>();
                             if let Ok(v) = amount {
-                                for i in 0..v {
+                                for _ in 0..v {
                                     tokens.push(Token::Block)
                                 }
                             } else {

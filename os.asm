@@ -1,5 +1,4 @@
     .ORIG x0000
-
 ; the TRAP vector table
     .FILL BAD_TRAP    ; x00
     .FILL BAD_TRAP    ; x01
@@ -516,6 +515,12 @@
     .FILL BAD_INT    ; xFE
     .FILL BAD_INT    ; xFF
 
+
+
+; sets r6 to stack
+; push fake psr to stack
+; push fake PC onto stack
+
 OS_START
     ; set system stack pointer
     LD R6, OS_SP
@@ -523,42 +528,60 @@ OS_START
     LD R0, USER_PSR
     ADD R6, R6, #-1
     STR R0, R6, #0
-    ; push synthesized (x3000) PSR onto system stack
+    ; push synthesized (x3000) PC onto system stack
     LD R0, USER_PC
     ADD R6, R6, #-1
     STR R0, R6, #0
     ; enter user mode
     RTI
 
-OS_SP       .FILL x3000
-USER_PSR    .FILL x8002
+OS_SP       .FILL x3000 ; the stack grows to lower (i hate stack terminology) addresses
+USER_PSR    .FILL x8002 ; x8000 means on, 2nd to last bit means user mode
 USER_PC     .FILL x3000
     .END
 
+
+; memory input/output works by using the designated
+; 'device register addresses' which are from 
+; xfe00-xffff in the lc-3 memory
     .ORIG x300
 TRAP_GETC
-    LDI R0, OS_KBSR        ; wait for a keystroke
+    LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to -1)
     BRzp TRAP_GETC
+    AND R0, R0, #0
+    STI R0, OS_KBSR        ; clear the bit to signal it was read
     LDI R0, OS_KBDR        ; read it and return
     RTI
 
-OS_KBSR    .FILL xFE00
+OS_KBSR    .FILL xFE00     ; the cpu has the ability to set this to -1, the os can only clear it
 OS_KBDR    .FILL xFE02
 
 
 TRAP_OUT
+    LD R6, OS_SP         ; actually load the stack pointer so its not just garbage 
+
     ADD R6, R6, #-1
     STR R1, R6, #0        ; save R1
+
+    ADD R6, R6, #-1
+    STR R2, R6, #0        ; save R2
 TRAP_OUT_WAIT
-    LDI R1, OS_DSR        ; wait for the display to be ready
+    LDI R1, OS_DSR        ; wait for the display to be ready (same deal as text input)
     BRzp TRAP_OUT_WAIT
+
     STI R0, OS_DDR        ; write the character and return
+    AND R2, R2, #0
+    STI R2, OS_DSR        ; clear the bit to signal we read
+
+    LDR R2, R6, #0        ; restore R2
+    ADD R6, R6, #1
     LDR R1, R6, #0        ; restore R1
     ADD R6, R6, #1
     RTI
 
 OS_DSR     .FILL xFE04
 OS_DDR     .FILL xFE06
+OS_SP      .FILL x3000
 
 
 TRAP_PUTS

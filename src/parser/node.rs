@@ -2,9 +2,15 @@
 
 use std::fmt::Debug;
 
+/// A trait for representing Nodes, rather than a struct as it 
+/// allows for more flexibility
 pub trait LCNode: Debug {
+    /// Converts the node to its binary representation
     fn to_binary(&self) -> u16;
+    /// Only used for labels, gets the user-defined name 
     fn get_label_name(&self) -> Option<&String>;
+    /// Only used for labels, sets the actual offset of the instruction since
+    /// it can only be known after creating the program representation
     fn init_label(&mut self, offset: i16);
 }
 
