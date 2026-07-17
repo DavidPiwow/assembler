@@ -1,3 +1,4 @@
+.ORIG x3000
 ADD R4, R4, #3 ; 'A
 ADD R5, R5, #5 ; 'B'
 AND R6, R6, #0 ; 'C'

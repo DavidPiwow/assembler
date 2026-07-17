@@ -39,10 +39,11 @@ impl LC3App {
         program.to_binary();
 
         let binary = program.get_binary();
+        let start = program.get_start();
 
         // calls set_program() on machine code -> loaded in CPU memory
         if !binary.is_empty() {
-            self.cpu.set_program(binary);
+            self.cpu.set_program(start, binary);
             self.assembled = true;
             return Result::Ok(());                   // assembled at this point
         } else {

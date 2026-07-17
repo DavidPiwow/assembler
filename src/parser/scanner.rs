@@ -2,6 +2,8 @@
 
 use std::{error::Error, fmt};
 
+use crate::parser::scanner::TokenError::{MissingEndDirective, MissingOrigDirective};
+
 #[derive(Debug, Clone)]
 pub enum Token {
     Label(String),
@@ -19,7 +21,9 @@ pub enum TokenError {
     UnknownRegister(String),
     UnknownToken(Token),
     EmptyProgram,
-    MalformedInteger
+    MalformedInteger,
+    MissingEndDirective,
+    MissingOrigDirective,
 }
 
 impl Error for TokenError {}
@@ -36,7 +40,9 @@ impl fmt::Display for TokenError {
 
             TokenError::UnknownToken(token) => write!(f, "{token:?} was not expected here"),
             TokenError::EmptyProgram => write!(f, "Program file is empty!"),
-            TokenError::MalformedInteger => write!(f, "Program contains a malformed integer")
+            TokenError::MalformedInteger => write!(f, "Program contains a malformed integer"),
+            TokenError::MissingEndDirective => write!(f, "Your file is missing an '.END' directive"),
+            TokenError::MissingOrigDirective => write!(f, "Your program is missing an '.ORIG' directive")
         }
     }
 }
@@ -65,7 +71,8 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let mut string_pos = 0;
     let mut cur_char;
 
-    let mut _program_origin = 0;
+
+    let mut has_end = false;
 
     while string_pos < text.len() {
         cur_char = chars[string_pos];
@@ -96,13 +103,9 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
                 if let Token::Directive(s) = &tokens[tokens.len() - 1] {
                     match s.as_str() {
-                        ".FILL" => {},
-                        ".STRINGZ" => {},
-                        ".END" => {
-                            char_stack.clear();
-                            break;
-                        }
-                        ".BLKW" => {
+                        ".FILL" |
+                        ".BLKW"|
+                        ".ORIG" => {
                             string_pos += 1;
                             while chars[string_pos] == ' ' {
                                 string_pos += 1;
@@ -111,20 +114,30 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                             while !chars[count_end].is_whitespace() {
                                 count_end += 1;
                             }
-
-                            let amount: Result<u16, std::num::ParseIntError> = text[string_pos..count_end].parse::<u16>();
-                            if let Ok(v) = amount {
-                                for _ in 0..v {
-                                    tokens.push(Token::Block)
-                                }
+                            if chars[string_pos].is_digit(10) || chars[string_pos] == 'x' {
+                                tokens.push(Token::Integer(text[string_pos..count_end].to_string()))
                             } else {
                                 return Err(TokenError::MalformedInteger);
                             }
+                        },
+                        
+                        ".STRINGZ" => {
+                            string_pos += 1;
+                            while chars[string_pos] != '\"' {
+                                string_pos += 1;
+                            }
+                            let mut str_end = string_pos + 1;
+                            while chars[str_end] != '\"' {
+                                str_end += 1;
+                            }
+                            tokens.push(Token::String(text[string_pos..str_end].to_string()))
+                        },
+                        ".END" => {
+                            has_end = true;
+                            char_stack.clear();
+                            break;
                         }
-
-                        _ => {
-
-                        }
+                        _ => {}
                     }
                 }
             } else {
@@ -134,17 +147,14 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
         } else {
             if !(is_seperator(cur_char)) {
                 char_stack.push(cur_char);
+
             }
         }
-
-        
 
         string_pos += 1;
     }
 
-
     if !char_stack.is_empty() {
-        
         if char_stack.len() == 2 {
             if char_stack[0] == 'R' && char_stack[1].is_numeric() {
                 tokens.push(Token::Register(char_stack.iter().collect()));
@@ -160,11 +170,28 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
             tokens.push(Token::Integer(char_stack.iter().collect()));
         } else if char_stack[0] == '.' {
             tokens.push(Token::Directive(char_stack.iter().collect()));
+            if let Token::Directive(s) = &tokens[tokens.len() - 1] {
+                    // Only need to check for .END as that should be the last line always
+                    match s.as_str() {
+                       ".END" => {
+                            has_end = true;
+                            char_stack.clear();
+                        }
+                        _ => {}
+                    }
+                }
         }
         char_stack.clear();
     }
 
-    Ok(tokens)
+    if has_end {
+        Ok(tokens)
+    } else if has_end {
+        Err(MissingOrigDirective)
+    } else {
+        Err(MissingEndDirective)
+    }
+
 }
 
 fn find_opcode(chars: &[char]) -> Option<Token> {

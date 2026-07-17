@@ -10,6 +10,14 @@ use crate::parser::{
     scanner::{Token, TokenError},
 };
 
+
+fn convert_hex_int(s: &String) -> Option<u16> {
+    let n = u16::from_str_radix(&s.trim()[1..], 16);
+    println!("{s} but then {n:?}");
+    n.ok()
+}
+
+
 pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut pos = 0;
     let mut instr_count = 0;
@@ -17,11 +25,51 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut labels: LabelMap = HashMap::new();
     let mut nodes: NodeVec = vec![];
 
+    let mut program_start: u16 = 0;
     while pos < tokens.len() {
         match &tokens[pos] {
-            Token::Directive(_) => {
-                pos += 2;
-                continue;
+            Token::Directive(s) => {
+                 match s.as_str() {
+                        ".FILL" => {
+
+                        },
+                        ".ORIG" => {
+                            let int_str = match &tokens[pos+1] {
+                                Token::Integer(s) => s,
+                                _ => unreachable!()
+                            };
+
+                            if int_str.starts_with('x') {
+                                println!("{int_str}");
+                                let orig =convert_hex_int(int_str);
+                                if orig.is_some() {
+                                    program_start = orig.unwrap();
+                                } else {
+                                    return Err(TokenError::MalformedInteger)
+                                }
+                            } else {
+                                let orig = int_str.parse::<u16>();
+                                if orig.is_err() {
+                                    return Err(TokenError::MalformedInteger)
+                                }
+                                let orig = orig.unwrap();
+                                program_start = orig;
+                            }
+                        },
+                        ".BLKW" => {
+                            
+                        },
+
+                        ".STRINGZ" => {
+
+                        },
+
+                        _ => {
+
+                        }
+                    }
+                    pos += 2;
+                    continue;
             }
             Token::Opcode(s) => {
                 let count = token_count(s.as_str());
@@ -65,7 +113,7 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
         }
     }
 
-    Ok(Program::from(nodes, labels))
+    Ok(Program::from(nodes, labels, program_start))
 }
 
 fn token_count(s: &str) -> usize {

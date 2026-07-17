@@ -521,10 +521,11 @@ impl CPU {
     /// 
     /// # Effects
     /// Copies the slice into memory
-    pub fn set_program(&mut self, program: &[u16]) {
+    pub fn set_program(&mut self, start: u16, program: &[u16]) {
+        self.pc = start;
         let mut i = 0;
         for v in program {
-            self.memory[i] = *v;
+            self.memory[(start + i) as usize] = *v;
             i += 1;
         }
     }

@@ -12,14 +12,14 @@ pub type LabelMap = HashMap<String, u16>;
 pub struct Program {
     tree: NodeVec,
     labels: LabelMap,
-
+    start_location: u16,
     binary: Vec<u16>,
 }
 
 impl Program {
-    pub fn from(tree: NodeVec, labels: LabelMap) -> Self {
+    pub fn from(tree: NodeVec, labels: LabelMap, start_location: u16) -> Self {
         Self {
-            tree, labels, binary: vec![],
+            tree, labels, start_location, binary: vec![],
         }
     }
 
@@ -45,6 +45,10 @@ impl Program {
     
     pub fn get_binary(&self) -> &Vec<u16> {
         &self.binary
+    }
+
+    pub fn get_start(&self) -> u16 {
+        self.start_location
     }
 }
 
