@@ -11,3 +11,4 @@ ADD R5, R5, #-1 ; while 'B' > 0
 BRp LOOP
 STR R6, R3, #2
 HALT
+.END

@@ -570,8 +570,6 @@ TRAP_OUT_WAIT
     BRzp TRAP_OUT_WAIT
 
     STI R0, OS_DDR        ; write the character and return
-    AND R2, R2, #0
-    STI R2, OS_DSR        ; clear the bit to signal we read
 
     LDR R2, R6, #0        ; restore R2
     ADD R6, R6, #1

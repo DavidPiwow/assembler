@@ -50,7 +50,8 @@ impl fmt::Display for TokenError {
 #[inline(always)]
 fn starts_opcode(c: char) -> bool {
     match c {
-        'A' | 'B' | 'J' | 'L' | 'N' | 'R' | 'S' | 'T' | 'H' => true,
+        'A' | 'B' | 'J' | 'L' | 'N' | 'R' | 'S' | 'T' | 'H' | 'P' | 'G'
+        | 'O' | 'I' => true,
         _ => false,
     }
 }
@@ -97,13 +98,12 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                 } else {
                     tokens.push(Token::Label(char_stack.iter().collect()));
                 }
-            } else if char_stack[0] == '#' || char_stack[0] == 'x' {
+            } else if char_stack[0] == '#' || char_stack[0] == 'x' || char_stack[0].is_digit(10) {
                 tokens.push(Token::Integer(char_stack.iter().collect()));
             } else if char_stack[0] == '.' {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
                 if let Token::Directive(s) = &tokens[tokens.len() - 1] {
                     match s.as_str() {
-                        ".FILL" |
                         ".BLKW"|
                         ".ORIG" => {
                             string_pos += 1;
@@ -119,6 +119,8 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                             } else {
                                 return Err(TokenError::MalformedInteger);
                             }
+                            string_pos = count_end;
+                        
                         },
                         
                         ".STRINGZ" => {
@@ -126,11 +128,13 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                             while chars[string_pos] != '\"' {
                                 string_pos += 1;
                             }
+                            let s_start =  string_pos + 1;
                             let mut str_end = string_pos + 1;
                             while chars[str_end] != '\"' {
                                 str_end += 1;
                             }
-                            tokens.push(Token::String(text[string_pos..str_end].to_string()))
+                            string_pos = str_end + 1;
+                            tokens.push(Token::String(text[s_start..str_end].to_string()))
                         },
                         ".END" => {
                             has_end = true;
@@ -199,7 +203,8 @@ fn find_opcode(chars: &[char]) -> Option<Token> {
     match s.as_str() {
         "ADD" | "AND" | "NOT" | "BR" | "BRn" | "BRz" | "BRp" | "BRnz" | "BRnp" | "BRzp"
         | "BRnzp" | "JMP" | "JSR" | "JSRR" | "LD" | "LDI" | "LDR" | "LEA" | "RET" | "RTI"
-        | "ST" | "STI" | "STR" | "TRAP" | "HALT" => Some(Token::Opcode(s)),
+        | "ST" | "STI" | "STR" | "TRAP" | "HALT" | "GETC" | "OUT" 
+        | "PUTS" | "IN" | "PUTSP"   => Some(Token::Opcode(s)),
         _ => None,
     }
 }

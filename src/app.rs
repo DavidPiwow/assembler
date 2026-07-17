@@ -11,6 +11,71 @@ pub struct LC3App {
     pub error_message: Option<String>,  // show error messages
 }
 
+
+const test_os: &str = ".ORIG x0000
+; the TRAP vector table
+    .FILL 0    ; x00
+    .FILL 0    ; x01
+    .FILL 0    ; x02
+    .FILL 0    ; x03
+    .FILL 0    ; x04
+    .FILL 0    ; x05
+    .FILL 0    ; x06
+    .FILL 0    ; x07
+    .FILL 0    ; x08
+    .FILL 0    ; x09
+    .FILL 0    ; x0A
+    .FILL 0    ; x0B
+    .FILL 0    ; x0C
+    .FILL 0    ; x0D
+    .FILL 0    ; x0E
+    .FILL 0    ; x0F
+    .FILL 0    ; x10
+    .FILL 0    ; x11
+    .FILL 0    ; x12
+    .FILL 0    ; x13
+    .FILL 0    ; x14
+    .FILL 0    ; x15
+    .FILL 0    ; x16
+    .FILL 0    ; x17
+    .FILL 0    ; x18
+    .FILL 0    ; x19
+    .FILL 0    ; x1A
+    .FILL 0    ; x1B
+    .FILL 0    ; x1C
+    .FILL 0    ; x1D
+    .FILL 0    ; x1E
+    .FILL 0    ; x1F
+    .FILL 0   ; x20
+    .FILL TRAP_OUT    ; x21
+    .FILL TRAP_PUTS   ; x22
+    .FILL 0     ; x23
+    .FILL 0  ; x24
+    .FILL 0   ; x25
+
+TRAP_OUT
+    STI R0, OS_DDR        ; write the character and return
+    RTI
+
+OS_DSR     .FILL xFE04
+OS_DDR     .FILL xFE06
+OS_SP      .FILL x3000
+
+
+TRAP_PUTS
+    ADD R1, R0, #0        ; move string pointer (R0) into R1
+TRAP_PUTS_LOOP
+    LDR R0, R1, #0        ; write characters in string using OUT
+    BRz TRAP_PUTS_DONE
+    OUT
+    ADD R1, R1, #1
+    BRnzp TRAP_PUTS_LOOP
+TRAP_PUTS_DONE
+    RTI
+.END
+
+";
+
 impl LC3App {
     pub fn new() -> Self {
         let cpu = CPU::default();    
@@ -34,6 +99,13 @@ impl LC3App {
         let tokens: Vec<scanner::Token> = scanner::tokenize(&self.source_text)?;
 
         // parser taken tokens ->  program
+        let os_tokens = scanner::tokenize(test_os)?;
+        let mut os_program = syntax_tree::scan_sequence(os_tokens)?;
+        os_program.to_binary();
+        let os_binary = os_program.get_binary();
+
+        self.cpu.set_program(0, os_binary);
+
         let mut program =  syntax_tree::scan_sequence(tokens)?;
         // calls to_binary() on program -> machine code
         program.to_binary();

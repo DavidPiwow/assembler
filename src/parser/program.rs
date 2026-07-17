@@ -3,8 +3,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::parser::node::LCNode;
-
+use crate::parser::node::{LCNode, Operation};
 
 pub type NodeVec = Vec<Box<dyn LCNode>>;
 pub type LabelMap = HashMap<String, u16>;
@@ -19,7 +18,10 @@ pub struct Program {
 impl Program {
     pub fn from(tree: NodeVec, labels: LabelMap, start_location: u16) -> Self {
         Self {
-            tree, labels, start_location, binary: vec![],
+            tree,
+            labels,
+            start_location,
+            binary: vec![],
         }
     }
 
@@ -30,19 +32,29 @@ impl Program {
         for node in &mut self.tree {
             let n = node.as_mut();
             let name = n.get_label_name();
-
             if name.is_some() {
-                let label_location = self.labels.get(name.unwrap());
-                if label_location.is_some() {
-                    n.init_label(*label_location.unwrap() as i16 - (instr_pos+1));
+                match n.get_operation() {
+                    Operation::Literal => {
+                        let label_location = self.labels.get(name.unwrap());
+
+                        if label_location.is_some() {
+                            n.init_label(*label_location.unwrap() as i16);
+                        }
+                    }
+                    _ => {
+                        let label_location = self.labels.get(name.unwrap());
+
+                        if label_location.is_some() {
+                            n.init_label(*label_location.unwrap() as i16 - (instr_pos + 1));
+                        }
+                    }
                 }
             }
-
             self.binary.push(node.to_binary());
             instr_pos += 1;
         }
     }
-    
+
     pub fn get_binary(&self) -> &Vec<u16> {
         &self.binary
     }
@@ -60,4 +72,3 @@ impl fmt::Debug for Program {
         write!(f, "{:?}", self.labels)
     }
 }
-

@@ -7,16 +7,19 @@ use std::fmt::Debug;
 pub trait LCNode: Debug {
     /// Converts the node to its binary representation
     fn to_binary(&self) -> u16;
+    /// Gets operation type
+    fn get_operation(&self) -> Operation;
     /// Only used for labels, gets the user-defined name 
     fn get_label_name(&self) -> Option<&String>;
     /// Only used for labels, sets the actual offset of the instruction since
     /// it can only be known after creating the program representation
     fn init_label(&mut self, offset: i16);
+
 }
 
 
 #[allow(unused)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Operation {
     Add,
     And,
@@ -41,6 +44,7 @@ pub enum Operation {
     Sti,
     Str,
     Trap,
+    Literal // for rare cases when labels need to be represented by where in memory they are instead of offset
 }
 
 #[derive(Debug)]
@@ -73,6 +77,26 @@ impl IntNode {
     }
 }
 
+impl LCNode for IntNode {
+    fn to_binary(&self) -> u16 {
+        self.value as u16
+    }
+
+    fn get_operation(&self) -> Operation {
+        Operation::Literal
+    }
+
+    fn get_label_name(&self) -> Option<&String> {
+        None
+    }
+
+    fn init_label(&mut self, offset: i16) {
+        unreachable!()
+    }
+}
+
+
+
 #[derive(Debug)]
 pub enum ArithmeticOperand {
     Register(RegisterNode),
@@ -99,6 +123,24 @@ impl LabelNode {
         }
     }
 }
+
+impl LCNode for LabelNode {
+    fn get_label_name(&self) -> Option<&String> {
+        Some(&self.label)
+    }
+
+    fn init_label(&mut self, offset: i16) {
+        self.location = Some(offset);
+    }
+
+    fn to_binary(&self) -> u16 {
+        self.location.unwrap() as u16
+    }
+    fn get_operation(&self) -> Operation {
+        Operation::Literal
+    }
+}
+
 
 #[derive(Debug)]
 pub struct ArithmeticNode {
@@ -150,6 +192,10 @@ impl LCNode for ArithmeticNode {
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
+    }
 }
 
 
@@ -186,6 +232,10 @@ impl LCNode for NotNode {
 
     fn init_label(&mut self, _: i16) {
         unreachable!()
+    }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
     }
 }
 
@@ -234,6 +284,10 @@ impl LCNode for MemOpNode {
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
+    }
 }
 
 #[derive(Debug)]
@@ -268,7 +322,7 @@ impl LCNode for IMemOpNode {
         let offset9 = match &self.offset {
             OffsetType::Integer(imm) => (imm.value as i16) & ((0b1 << 9) - 1),
             OffsetType::Label(label) => {
-                (label.location.unwrap() as i16) & ((0b1 << 9) - 1) // not implemented - throw error 
+                (label.location.unwrap() as i16) & ((0b1 << 9) - 1) 
             }
         } as u16;
 
@@ -286,6 +340,10 @@ impl LCNode for IMemOpNode {
         if let OffsetType::Label(label) = &mut self.offset {
             label.location = Some(offset)
         }
+    }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
     }
 }
 
@@ -324,6 +382,10 @@ impl LCNode for TrapNode {
     fn init_label(&mut self, _: i16) {
         unreachable!()
     }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
+    }
 }
 
 #[derive(Debug)]
@@ -359,6 +421,10 @@ impl LCNode for JumpNode {
 
     fn init_label(&mut self, _: i16) {
         unreachable!()
+    }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
     }
 }
 
@@ -430,6 +496,10 @@ impl LCNode for IJumpNode {
             label.location = Some(offset)
         }
     }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
+    }
 }
 
 
@@ -460,6 +530,10 @@ impl LCNode for RetNode {
 
     fn init_label(&mut self, _: i16) {
         unreachable!()
+    }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
     }
 }
 
@@ -492,5 +566,9 @@ impl LCNode for RtiNode {
 
     fn init_label(&mut self, _: i16) {
         unreachable!()
+    }
+
+    fn get_operation(&self) -> Operation {
+        self.operation
     }
 }

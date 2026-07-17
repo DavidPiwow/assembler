@@ -249,6 +249,9 @@ impl CPU {
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
+                if self.mar == 0xFE06 {
+                    println!("{}", self.registers[0] as u8 as char);
+                }
                 self.store_reg_to_memory();
             }
             0b0111 => {
@@ -282,8 +285,10 @@ impl CPU {
         self.mdr = self.psr;
 
         let trap_vec = self.ir & 0xFF;
-
-        
+        if trap_vec == 0x25 {
+            self.mcr = 0;
+            return;
+        }
 
         self.psr &= !0x8000; // clear bit 15
 
@@ -291,17 +296,13 @@ impl CPU {
         self.memory[self.s_pointer as usize] = self.mdr;
 
         self.s_pointer -= 1;
-        self.memory[self.s_pointer as usize] = self.pc - 1;
+        self.memory[self.s_pointer as usize] = self.pc-1 ;
 
         self.mdr = self.memory[trap_vec as usize];
-        println!("{}", self.mdr);
 
         self.pc = self.mdr;
 
-        if trap_vec == 0x25 {
-            self.mcr = 0;
-            return;
-        }
+        
     }
 
 
@@ -312,13 +313,12 @@ impl CPU {
     /// # Effects
     /// Pops the saved `PC` and `PSR` from the stack, and restores these values in the CPU.
     fn return_from_trap(&mut self) {
-        self.mdr = self.memory[self.s_pointer - 2 as usize];
+        self.mdr = self.memory[self.s_pointer as usize];
         self.pc = self.mdr;
-
+        self.s_pointer += 1;
         
-        self.mdr = self.memory[self.s_pointer - 1 as usize];
+        self.mdr = self.memory[self.s_pointer as usize];
         self.psr = self.mdr;
-
         self.s_pointer += 1;
     }
 
@@ -466,7 +466,8 @@ impl CPU {
 
     /// Continuously steps the CPU until the MCR power bit is cleared
     pub fn run(&mut self) {
-        while (self.mcr & 0x8000) != 0 {
+        while self.mcr != 0 {
+           // println!("MCR: {}", self.mcr);
             self.step();
         }
     }
@@ -548,7 +549,7 @@ impl CPU {
 
 impl Default for CPU {
     fn default() -> Self {
-        CPU {
+        let mut c = CPU {
             ir: 0,
             mdr: 0,
             mar: 0,
@@ -562,6 +563,8 @@ impl Default for CPU {
             ben: false,
             s_pointer: 0x3000,
             us_pointer: 0xFDFF,
-        }
+        };
+        c.memory[0xFE04] = 0x8000;
+        return c;
     }
 }

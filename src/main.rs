@@ -3,6 +3,9 @@ use eframe::egui;
 mod app;
 use app::LC3App;
 
+use crate::cpu::CPU;
+use crate::parser::{scanner, syntax_tree};
+
 mod cpu;
 mod parser;
 mod views;
@@ -25,4 +28,5 @@ fn main() {
         // when the app open, egui runs it 
         Box::new(|_cc| Box::new(LC3App::new())),  // Box puts data on the heap
     );
+
 }

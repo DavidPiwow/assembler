@@ -4,109 +4,116 @@ use std::collections::HashMap;
 
 use crate::parser::{
     node::{
-        ArithmeticNode, ArithmeticOperand, IJumpNode, IMemOpNode, IntNode, JumpNode, LCNode, LabelNode, MemOpNode, NotNode, OffsetType, Operation, RegisterNode, TrapMode, TrapNode
+        ArithmeticNode, ArithmeticOperand, IJumpNode, IMemOpNode, IntNode, JumpNode, LCNode,
+        LabelNode, MemOpNode, NotNode, OffsetType, Operation, RegisterNode, RetNode, RtiNode,
+        TrapMode, TrapNode,
     },
     program::{LabelMap, NodeVec, Program},
     scanner::{Token, TokenError},
 };
 
-
 fn convert_hex_int(s: &String) -> Option<u16> {
     let n = u16::from_str_radix(&s.trim()[1..], 16);
-    println!("{s} but then {n:?}");
     n.ok()
 }
 
+#[doc(hidden)]
+fn directive_convert_int(s: &String) -> Option<u16> {
+    if s.starts_with('x') {
+        convert_hex_int(s)
+    } else {
+        s.parse::<u16>().ok()
+    }
+}
 
 pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut pos = 0;
-    let mut instr_count = 0;
 
     let mut labels: LabelMap = HashMap::new();
     let mut nodes: NodeVec = vec![];
 
     let mut program_start: u16 = 0;
+    let mut mem_loc_count = 0; // how many memory locations the program has taken up so far
+
     while pos < tokens.len() {
         match &tokens[pos] {
             Token::Directive(s) => {
-                 match s.as_str() {
-                        ".FILL" => {
-
-                        },
-                        ".ORIG" => {
-                            let int_str = match &tokens[pos+1] {
-                                Token::Integer(s) => s,
-                                _ => unreachable!()
-                            };
-
-                            if int_str.starts_with('x') {
-                                println!("{int_str}");
-                                let orig =convert_hex_int(int_str);
-                                if orig.is_some() {
-                                    program_start = orig.unwrap();
-                                } else {
-                                    return Err(TokenError::MalformedInteger)
+                match s.as_str() {
+                    ".FILL" => {
+                        mem_loc_count += 1;
+                        match &tokens[pos + 1] {
+                            Token::Integer(s) => {
+                                let int_val = directive_convert_int(s);
+                                if int_val.is_none() {
+                                    return Err(TokenError::MalformedInteger);
                                 }
-                            } else {
-                                let orig = int_str.parse::<u16>();
-                                if orig.is_err() {
-                                    return Err(TokenError::MalformedInteger)
-                                }
-                                let orig = orig.unwrap();
-                                program_start = orig;
+                                nodes.push(Box::from(IntNode::from(int_val.unwrap() as i16)));
                             }
-                        },
-                        ".BLKW" => {
-                            
-                        },
+                            Token::Label(label) => {
+                                nodes.push(Box::from(LabelNode::from(label.to_string())));
+                            }
 
-                        ".STRINGZ" => {
-
-                        },
-
-                        _ => {
-
-                        }
+                            _ => unreachable!(),
+                        };
                     }
-                    pos += 2;
-                    continue;
+                    ".ORIG" => {
+                        let int_str = match &tokens[pos + 1] {
+                            Token::Integer(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        let int_val = directive_convert_int(int_str);
+                        if int_val.is_none() {
+                            return Err(TokenError::MalformedInteger);
+                        }
+
+                        program_start = int_val.unwrap();
+                    }
+                    ".BLKW" => {}
+
+                    ".STRINGZ" => match &tokens[pos + 1] {
+                        Token::String(s) => {
+                            for c in s.chars().collect::<Vec<char>>() {
+                                nodes.push(Box::from(IntNode::from(c as i16)));
+                            }
+                            mem_loc_count += s.len();
+                            nodes.push(Box::from(IntNode::from(0)));
+                        }
+                        _ => {
+                            return Err(TokenError::UnknownToken(tokens[pos + 1].clone()));
+                        }
+                    },
+
+                    _ => {}
+                }
+                pos += 2;
+                continue;
             }
             Token::Opcode(s) => {
+                mem_loc_count += 1;
                 let count = token_count(s.as_str());
                 let slice = &tokens[pos..pos + count + 1]; // why add 1?? is this a pattern in assembly?? 
 
                 let node: Box<dyn LCNode> = match s.as_str() {
-                    "ADD" | "AND" => {
-                        Box::from(create_arithmetic_node(slice)?)
-                    }
-                    "LDR" | "STR" => {
-                        Box::from(create_memory_node(slice)?)
-                    }
-                    "JMP" | "JSRR" => {
-                        Box::from(create_jump_node(slice)?)
-                    }
-                    "BR" | "BRn" | "BRz" | "BRp" | "JSR" => {
-                        
+                    "ADD" | "AND" => Box::from(create_arithmetic_node(slice)?),
+                    "LDR" | "STR" => Box::from(create_memory_node(slice)?),
+                    "JMP" | "JSRR" => Box::from(create_jump_node(slice)?),
+                    "BR" | "BRn" | "BRz" | "BRp" | "JSR" | "BRnz" | "BRzp" | "BRnp" | "BRnzp" => {
                         Box::from(create_ijump_node(slice)?)
                     }
-                    "NOT" => {
-                        Box::from(create_not_node(slice)?)
-                    }
-                    "LD" | "LDI" | "LEA" | "ST" | "STI" => {
-                        Box::from(create_imemory_node(slice)?)
-                    }
-                    "HALT" | "TRAP" => {
-                        Box::from(create_trap_node(slice)?)
-                    }
+                    "NOT" => Box::from(create_not_node(slice)?),
+                    "LD" | "LDI" | "LEA" | "ST" | "STI" => Box::from(create_imemory_node(slice)?),
+                    "HALT" | "TRAP" | "GETC" | "OUT" | "PUTS" | "IN" | "PUTSP"  => Box::from(create_trap_node(slice)?),
+                    "RET" => Box::from(create_ret_node()),
+                    "RTI" => Box::from(create_rti_node()),
                     _ => return Err(TokenError::UnknownToken(tokens[pos].clone())),
                 };
 
                 nodes.push(node);
                 pos += count + 1;
-                instr_count += 1;
             }
             Token::Label(s) => {
-                labels.insert(s.to_string(), instr_count);
+                labels.insert(s.to_string(), mem_loc_count as u16);
                 pos += 1;
             }
             _ => return Err(TokenError::UnknownToken(tokens[pos].clone())),
@@ -120,8 +127,9 @@ fn token_count(s: &str) -> usize {
     match s {
         "ADD" | "AND" | "LDR" | "STR" => 3,
         "NOT" | "LD" | "LDI" | "LEA" | "ST" | "STI" => 2,
-        "TRAP"  | "BR" | "BRn" | "BRz" | "BRp" | "JMP" | "JSR" | "JSRR" => 1,
-        "HALT" => 0,
+        "TRAP" | "BR" | "BRn" | "BRz" | "BRp" | "BRnz" | "BRzp" | "BRnp" | "BRnzp" | "JMP"
+        | "JSR" | "JSRR" => 1,
+        "HALT" | "RET" | "RTI" => 0,
         _ => 0,
     }
 }
@@ -211,6 +219,14 @@ fn create_not_node(tokens: &[Token]) -> Result<NotNode, TokenError> {
     Ok(NotNode::from(Operation::Not, operand1, operand2))
 }
 
+fn create_ret_node() -> RetNode {
+    RetNode::from(Operation::Ret)
+}
+
+fn create_rti_node() -> RtiNode {
+    RtiNode::from(Operation::Rti)
+}
+
 fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
@@ -260,18 +276,40 @@ fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
         let token = &tokens[0];
         match token {
             Token::Opcode(s) => {
-                return if s == "HALT" {
-                    Ok(TrapNode::from(Operation::Trap, TrapMode::Halt))
-                } else {
-                    Err(TokenError::UnknownToken(token.clone()))    
+
+                match s.as_str() {
+                    "GETC" => {
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::Getc))
+                    },
+                    "OUT" => {
+
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::Out))
+                    },
+                    "PUTS" => {
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::Puts))
+                    },
+                    "IN" => {
+                        
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::In))
+                    },
+                    "PUTSP" => {
+
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::Puts))
+                    },
+                    "HALT" => {
+                        return Ok(TrapNode::from(Operation::Trap, TrapMode::Halt))
+                    }
+                    _ => {
+                        return Err(TokenError::UnknownToken(token.clone()))
+                    }
                 }
-            },
+            }
             _ => return Err(TokenError::UnknownToken(token.clone())),
         }
     }
 
     let val = &tokens[1];
-    println!("{tokens:?}");
+
     if let Token::Integer(s) = val {
         let trap_mode = match s.as_str() {
             "x20" => TrapMode::Getc,
@@ -281,7 +319,6 @@ fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
             "x25" => TrapMode::Halt,
             _ => return Err(TokenError::UnknownToken(val.clone())),
         };
-
 
         return Ok(TrapNode::from(Operation::Trap, trap_mode));
     }
