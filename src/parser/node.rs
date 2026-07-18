@@ -90,7 +90,7 @@ impl LCNode for IntNode {
         None
     }
 
-    fn init_label(&mut self, offset: i16) {
+    fn init_label(&mut self, _: i16) {
         unreachable!()
     }
 }

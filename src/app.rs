@@ -12,7 +12,7 @@ pub struct LC3App {
 }
 
 
-const test_os: &str = ".ORIG x0000
+const TEST_OS: &str = ".ORIG x0000
 ; the TRAP vector table
     .FILL 0    ; x00
     .FILL 0    ; x01
@@ -99,7 +99,7 @@ impl LC3App {
         let tokens: Vec<scanner::Token> = scanner::tokenize(&self.source_text)?;
 
         // parser taken tokens ->  program
-        let os_tokens = scanner::tokenize(test_os)?;
+        let os_tokens = scanner::tokenize(TEST_OS)?;
         let mut os_program = syntax_tree::scan_sequence(os_tokens)?;
         os_program.to_binary();
         let os_binary = os_program.get_binary();

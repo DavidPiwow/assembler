@@ -3,8 +3,6 @@ use eframe::egui;
 mod app;
 use app::LC3App;
 
-use crate::cpu::CPU;
-use crate::parser::{scanner, syntax_tree};
 
 mod cpu;
 mod parser;

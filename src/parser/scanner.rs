@@ -12,7 +12,7 @@ pub enum Token {
     Integer(String),
     Directive(String),
     String(String),
-    Block,
+    _Block,
 }
 
 #[derive(Debug)]
