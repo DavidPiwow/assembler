@@ -28,6 +28,7 @@ fn directive_convert_int(s: &String) -> Option<u16> {
     }
 }
 
+/// Takes in a vector of tokens and returns a program if all goes well
 pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut pos = 0;
 
@@ -37,11 +38,14 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     let mut program_start: u16 = 0;
     let mut mem_loc_count = 0; // how many memory locations the program has taken up so far
 
+    // Since assembly is a simple language, it can be converted by going through
+    // everything in a linear manner
     while pos < tokens.len() {
         match &tokens[pos] {
             Token::Directive(s) => {
                 match s.as_str() {
                     ".FILL" => {
+                        // have to increase memory location count since this will store an integer
                         mem_loc_count += 1;
                         match &tokens[pos + 1] {
                             Token::Integer(s) => {
@@ -92,9 +96,14 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
                 continue;
             }
             Token::Opcode(s) => {
+                // each instruction will take up a memory location
                 mem_loc_count += 1;
+
+                // we need to grab the operands and other information which are also
+                // stored as tokens, the count var is how many of these
+                // to grab. need to add 1 because exclusive range 
                 let count = token_count(s.as_str());
-                let slice = &tokens[pos..pos + count + 1]; // why add 1?? is this a pattern in assembly?? 
+                let slice = &tokens[pos..pos + count + 1]; 
 
                 let node: Box<dyn LCNode> = match s.as_str() {
                     "ADD" | "AND" => Box::from(create_arithmetic_node(slice)?),
@@ -115,6 +124,7 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
                 pos += count + 1;
             }
             Token::Label(s) => {
+                // if we find a label by itself, its where it is 'defined' 
                 labels.insert(s.to_string(), mem_loc_count as u16);
                 pos += 1;
             }
