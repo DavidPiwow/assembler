@@ -4,6 +4,8 @@ use std::{error::Error, fmt};
 
 use crate::parser::scanner::TokenError::{MissingEndDirective, MissingOrigDirective};
 
+/// The smallest components of a program, the enum type describes
+/// what kind while the String keeps the original data
 #[derive(Debug, Clone)]
 pub enum Token {
     Label(String),
@@ -15,6 +17,7 @@ pub enum Token {
     _Block,
 }
 
+// this should be expanded, more descriptive error messages and such
 #[derive(Debug)]
 pub enum TokenError {
     OutOfBounds(String),
@@ -48,6 +51,7 @@ impl fmt::Display for TokenError {
 }
 
 #[inline(always)]
+#[doc(hidden)]
 fn starts_opcode(c: char) -> bool {
     match c {
         'A' | 'B' | 'J' | 'L' | 'N' | 'R' | 'S' | 'T' | 'H' | 'P' | 'G'
@@ -57,6 +61,7 @@ fn starts_opcode(c: char) -> bool {
 }
 
 #[inline(always)]
+#[doc(hidden)]
 fn is_seperator(c: char) -> bool {
     match c {
         ' ' | '\n' | '\r' | ',' | '\0' => true,
@@ -64,6 +69,7 @@ fn is_seperator(c: char) -> bool {
     }
 }
 
+/// Takes in a string and converts it to a vector of tokens
 pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let chars = text.chars().collect::<Vec<char>>();
     let mut char_stack: Vec<char> = Vec::new();
@@ -73,11 +79,13 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let mut cur_char;
 
 
+    // every program needs a .END directive
     let mut has_end = false;
 
     while string_pos < text.len() {
         cur_char = chars[string_pos];
 
+        // im just ignoring comments
         if cur_char == ';' {
             while string_pos < text.len() && cur_char != '\n' {
                 string_pos += 1;
@@ -88,9 +96,12 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
             }
         }
 
+        // if its whitespace, we know its a word so can look at whats on the stack
         if !char_stack.is_empty() && (is_seperator(cur_char)) {
+            // if its a register
             if char_stack[0] == 'R' && char_stack[1].is_numeric() {
                 tokens.push(Token::Register(char_stack.iter().collect()));
+            // if the first char is an opcode we can check if its one or its a label
             } else if starts_opcode(char_stack[0]) {
                 let op = find_opcode(&char_stack);
                 if op.is_some() {
@@ -98,8 +109,10 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                 } else {
                     tokens.push(Token::Label(char_stack.iter().collect()));
                 }
+            // if its a number
             } else if char_stack[0] == '#' || char_stack[0] == 'x' || char_stack[0].is_digit(10) {
                 tokens.push(Token::Integer(char_stack.iter().collect()));
+            // if its a directive
             } else if char_stack[0] == '.' {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
                 if let Token::Directive(s) = &tokens[tokens.len() - 1] {
@@ -144,6 +157,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                         _ => {}
                     }
                 }
+            // if none of the above apply, call it a label
             } else {
                 tokens.push(Token::Label(char_stack.iter().collect()));
             }
@@ -158,6 +172,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
         string_pos += 1;
     }
 
+    // even though its the end of a file, have to still check the char stack
     if !char_stack.is_empty() {
         if char_stack.len() == 2 {
             if char_stack[0] == 'R' && char_stack[1].is_numeric() {
@@ -176,6 +191,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
             tokens.push(Token::Directive(char_stack.iter().collect()));
             if let Token::Directive(s) = &tokens[tokens.len() - 1] {
                     // Only need to check for .END as that should be the last line always
+                    // (except it might not be but im going to look away)
                     match s.as_str() {
                        ".END" => {
                             has_end = true;
@@ -190,14 +206,13 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
 
     if has_end {
         Ok(tokens)
-    } else if has_end {
-        Err(MissingOrigDirective)
     } else {
         Err(MissingEndDirective)
     }
 
 }
 
+/// Returns an opcode token if the string passed in represents an opcode
 fn find_opcode(chars: &[char]) -> Option<Token> {
     let s: String = chars.iter().collect();
     match s.as_str() {

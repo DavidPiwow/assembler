@@ -5,13 +5,21 @@ use std::collections::HashMap;
 
 use crate::parser::node::{LCNode, Operation};
 
+// im not typing all that x
 pub type NodeVec = Vec<Box<dyn LCNode>>;
 pub type LabelMap = HashMap<String, u16>;
 
+
+/// Represents an LC3 program
 pub struct Program {
+    /// A collection of nodes, sort of like an Abstract Syntax Tree but not really
     tree: NodeVec,
+    /// The easiest way to represent labels is just with a hash map
     labels: LabelMap,
+    /// The program needs to be loaded into a specific memory location specified by the
+    /// program's author. Usually x3000
     start_location: u16,
+    /// A collection of binary instructions and program data that the CPU can load in
     binary: Vec<u16>,
 }
 

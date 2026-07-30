@@ -12,6 +12,8 @@ use crate::parser::{
     scanner::{Token, TokenError},
 };
 
+
+#[doc(hidden)]
 fn convert_hex_int(s: &String) -> Option<u16> {
     let n = u16::from_str_radix(&s.trim()[1..], 16);
     n.ok()
@@ -123,6 +125,9 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
     Ok(Program::from(nodes, labels, program_start))
 }
 
+
+// How many tokens follow an opcode to specify the full instruction
+#[doc(hidden)]
 fn token_count(s: &str) -> usize {
     match s {
         "ADD" | "AND" | "LDR" | "STR" => 3,
@@ -134,6 +139,9 @@ fn token_count(s: &str) -> usize {
     }
 }
 
+
+// numbers in the form #[num]
+#[doc(hidden)]
 fn convert_integer(token: &Token, bits: u8) -> Result<IntNode, TokenError> {
     let bit_max = 1 << (bits - 1);
 
@@ -153,6 +161,7 @@ fn convert_integer(token: &Token, bits: u8) -> Result<IntNode, TokenError> {
     Err(TokenError::UnknownToken(token.clone()))
 }
 
+#[doc(hidden)]
 fn convert_register(token: &Token) -> Result<RegisterNode, TokenError> {
     match token {
         Token::Register(val) => {
@@ -171,6 +180,13 @@ fn convert_register(token: &Token) -> Result<RegisterNode, TokenError> {
 
 // Add/And op, op, op
 // Add/And op, op, imm
+/// Creates an arithmetic node using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, two register tokens, and either an integer or register
+/// 
+/// # Returns
+/// A node representing an arithmetic operation
 fn create_arithmetic_node(tokens: &[Token]) -> Result<ArithmeticNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
@@ -212,6 +228,15 @@ fn create_arithmetic_node(tokens: &[Token]) -> Result<ArithmeticNode, TokenError
     }
 }
 
+
+
+/// Creates a not node using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, and two registers
+/// 
+/// # Returns
+/// A node representing a not operation
 fn create_not_node(tokens: &[Token]) -> Result<NotNode, TokenError> {
     let operand1 = convert_register(&tokens[1])?;
     let operand2 = convert_register(&tokens[2])?;
@@ -219,14 +244,28 @@ fn create_not_node(tokens: &[Token]) -> Result<NotNode, TokenError> {
     Ok(NotNode::from(Operation::Not, operand1, operand2))
 }
 
+
+/// Creates an RET node using a slice of tokens.
 fn create_ret_node() -> RetNode {
     RetNode::from(Operation::Ret)
 }
 
+
+
+/// Creates an RTI node using a slice of tokens.
 fn create_rti_node() -> RtiNode {
     RtiNode::from(Operation::Rti)
 }
 
+
+
+/// Creates a node representing either LDR or STR using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, two operands, and an offset
+/// 
+/// # Returns
+/// A node representing a memory operation
 fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
@@ -244,6 +283,15 @@ fn create_memory_node(tokens: &[Token]) -> Result<MemOpNode, TokenError> {
     Ok(MemOpNode::from(operation, operand1, operand2, offset))
 }
 
+
+
+/// Creates a node representing an immediate memory access operation using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, register operand, and an offset
+/// 
+/// # Returns
+/// A node representing a memory operation
 fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
@@ -271,6 +319,15 @@ fn create_imemory_node(tokens: &[Token]) -> Result<IMemOpNode, TokenError> {
     Ok(IMemOpNode::from(operation, operand1, offset))
 }
 
+
+
+/// Creates a node representing a trap instruction using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation and trap vector, or a named trap function
+/// 
+/// # Returns
+/// A node representing a trap operation
 fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
     if tokens.len() == 1 {
         let token = &tokens[0];
@@ -326,6 +383,15 @@ fn create_trap_node(tokens: &[Token]) -> Result<TrapNode, TokenError> {
     Err(TokenError::UnknownToken(val.clone()))
 }
 
+
+
+/// Creates a node representing either JMP or JSRR using a slice of tokens.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, and operand
+/// 
+/// # Returns
+/// A node representing a jump operation
 fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
@@ -341,6 +407,15 @@ fn create_jump_node(tokens: &[Token]) -> Result<JumpNode, TokenError> {
     Ok(JumpNode::from(operation, operand1))
 }
 
+
+
+/// Creates a node representing an immediate jump instruction.
+/// 
+/// # Arguments
+/// A slice of tokens containing the operation, and offset
+/// 
+/// # Returns
+/// A node representing a jump operation
 fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
     let operation = match &tokens[0] {
         Token::Opcode(s) => match s.as_str() {
