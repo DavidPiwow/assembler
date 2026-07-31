@@ -23,6 +23,8 @@ fn convert_hex_int(s: &String) -> Option<u16> {
 fn directive_convert_int(s: &String) -> Option<u16> {
     if s.starts_with('x') {
         convert_hex_int(s)
+    } else if s.starts_with('#') {
+        s[1..].parse::<u16>().ok()
     } else {
         s.parse::<u16>().ok()
     }
@@ -75,14 +77,31 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
 
                         program_start = int_val.unwrap();
                     }
-                    ".BLKW" => {}
+                    ".BLKW" => {
+                        let int_str = match &tokens[pos + 1] {
+                            Token::Block(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        
+                        let int_val = directive_convert_int(int_str);
+                        if int_val.is_none() {
+                            return Err(TokenError::MalformedInteger);
+                        }
+                        
+                        let int_val = int_val.unwrap();
+                        for i in 0..int_val {
+                            nodes.push(Box::from(IntNode::from(0)));
+                        }
+                        mem_loc_count += int_val;
+                    }
 
                     ".STRINGZ" => match &tokens[pos + 1] {
                         Token::String(s) => {
                             for c in s.chars().collect::<Vec<char>>() {
                                 nodes.push(Box::from(IntNode::from(c as i16)));
                             }
-                            mem_loc_count += s.len();
+                            mem_loc_count += (s.len() as u16) + 1;
                             nodes.push(Box::from(IntNode::from(0)));
                         }
                         _ => {

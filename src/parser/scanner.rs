@@ -14,7 +14,7 @@ pub enum Token {
     Integer(String),
     Directive(String),
     String(String),
-    _Block,
+    Block(String),
 }
 
 // this should be expanded, more descriptive error messages and such
@@ -79,8 +79,9 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
     let mut cur_char;
 
 
-    // every program needs a .END directive
+    // every program needs both .ORIG and .END directives
     let mut has_end = false;
+    let mut has_orig = false;
 
     while string_pos < text.len() {
         cur_char = chars[string_pos];
@@ -117,7 +118,6 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                 tokens.push(Token::Directive(char_stack.iter().collect()));
                 if let Token::Directive(s) = &tokens[tokens.len() - 1] {
                     match s.as_str() {
-                        ".BLKW"|
                         ".ORIG" => {
                             string_pos += 1;
                             while chars[string_pos] == ' ' {
@@ -127,13 +127,30 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
                             while !chars[count_end].is_whitespace() {
                                 count_end += 1;
                             }
-                            if chars[string_pos].is_digit(10) || chars[string_pos] == 'x' {
+                            if chars[string_pos].is_digit(16) || chars[string_pos] == 'x' {
                                 tokens.push(Token::Integer(text[string_pos..count_end].to_string()))
                             } else {
                                 return Err(TokenError::MalformedInteger);
                             }
+                            has_orig = true;
                             string_pos = count_end;
                         
+                        },
+                        ".BLKW" => {
+                            string_pos += 1;
+                            while chars[string_pos] == ' ' {
+                                string_pos += 1;
+                            }
+                            let mut count_end = string_pos + 1;
+                            while !chars[count_end].is_whitespace() {
+                                count_end += 1;
+                            }
+                            if chars[string_pos].is_digit(10) || chars[string_pos] == '#' {
+                                tokens.push(Token::Block(text[string_pos..count_end].to_string()))
+                            } else {
+                                return Err(TokenError::MalformedInteger);
+                            }
+                            string_pos = count_end;
                         },
                         
                         ".STRINGZ" => {
@@ -204,10 +221,12 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, TokenError> {
         char_stack.clear();
     }
 
-    if has_end {
+    if has_end && has_orig {
         Ok(tokens)
-    } else {
+    } else if has_orig {
         Err(MissingEndDirective)
+    } else {
+        Err(MissingOrigDirective)
     }
 
 }
