@@ -515,8 +515,6 @@
     .FILL BAD_INT    ; xFE
     .FILL BAD_INT    ; xFF
 
-
-
 ; sets r6 to stack
 ; push fake psr to stack
 ; push fake PC onto stack
@@ -544,6 +542,8 @@ USER_PC     .FILL x3000
 ; memory input/output works by using the designated
 ; 'device register addresses' which are from 
 ; xfe00-xffff in the lc-3 memory
+
+; these commented code bits might not be necessary
     .ORIG x300
 TRAP_GETC
     LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to -1)
@@ -558,23 +558,7 @@ OS_KBDR    .FILL xFE02
 
 
 TRAP_OUT
-    LD R6, OS_SP         ; actually load the stack pointer so its not just garbage 
-
-    ADD R6, R6, #-1
-    STR R1, R6, #0        ; save R1
-
-    ADD R6, R6, #-1
-    STR R2, R6, #0        ; save R2
-TRAP_OUT_WAIT
-    LDI R1, OS_DSR        ; wait for the display to be ready (same deal as text input)
-    BRzp TRAP_OUT_WAIT
-
     STI R0, OS_DDR        ; write the character and return
-
-    LDR R2, R6, #0        ; restore R2
-    ADD R6, R6, #1
-    LDR R1, R6, #0        ; restore R1
-    ADD R6, R6, #1
     RTI
 
 OS_DSR     .FILL xFE04
@@ -583,10 +567,6 @@ OS_SP      .FILL x3000
 
 
 TRAP_PUTS
-    ADD R6, R6, #-1       ; save R0 and R1
-    STR R0, R6, #0
-    ADD R6, R6, #-1
-    STR R1, R6, #0
     ADD R1, R0, #0        ; move string pointer (R0) into R1
 TRAP_PUTS_LOOP
     LDR R0, R1, #0        ; write characters in string using OUT
@@ -595,11 +575,8 @@ TRAP_PUTS_LOOP
     ADD R1, R1, #1
     BRnzp TRAP_PUTS_LOOP
 TRAP_PUTS_DONE
-    LDR R1, R6, #0         ; restore R0 and R1
-    ADD R6, R6, #1
-    LDR R0, R6, #0
-    ADD R6, R6, #1
     RTI
+
 
 TRAP_IN
     LEA R0, TRAP_IN_MSG    ; prompt for input

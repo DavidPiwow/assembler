@@ -1,6 +1,10 @@
 // Do not touch, David's
 
 
+const LC3_KBSR: u16 = 0xFE00;
+const LC3_KBDR: u16 = 0xFE02;
+const LC3_DDR: u16 = 0xFE06;
+
 /// A struct representing an LC-3 CPU
 /// 
 /// 
@@ -217,7 +221,11 @@ impl CPU {
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
-                self.load_reg_from_memory();
+                if self.mar == LC3_KBDR {
+                    todo!()
+                } else {
+                    self.load_reg_from_memory();
+                }
             }
             0b0110 => {
                 // LDR
@@ -249,7 +257,7 @@ impl CPU {
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
-                if self.mar == 0xFE06 {
+                if self.mar == LC3_DDR {
                     println!("{}", self.registers[0] as u8 as char);
                 }
                 self.store_reg_to_memory();
@@ -285,9 +293,12 @@ impl CPU {
         self.mdr = self.psr;
 
         let trap_vec = self.ir & 0xFF;
-        if trap_vec == 0x25 {
+        if trap_vec == 0x25 { // halt
             self.mcr = 0;
             return;
+        } else if trap_vec == 0x20 { // getc
+            self.memory[LC3_KBDR as usize] = 'A' as u16;
+            self.memory[LC3_KBSR as usize] = 0xFFFF; // signals there is data to read
         }
 
         self.psr &= !0x8000; // clear bit 15
