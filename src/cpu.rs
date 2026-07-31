@@ -222,7 +222,8 @@ impl CPU {
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
                 if self.mar == LC3_KBDR {
-                    todo!()
+                    //todo!()
+                    self.load_reg_from_memory();
                 } else {
                     self.load_reg_from_memory();
                 }
@@ -258,7 +259,7 @@ impl CPU {
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
                 if self.mar == LC3_DDR {
-                    println!("{}", self.registers[0] as u8 as char);
+                    print!("{}", self.registers[0] as u8 as char);
                 }
                 self.store_reg_to_memory();
             }

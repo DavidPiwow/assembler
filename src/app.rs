@@ -46,12 +46,24 @@ const TEST_OS: &str = ".ORIG x0000
     .FILL 0    ; x1D
     .FILL 0    ; x1E
     .FILL 0    ; x1F
-    .FILL 0   ; x20
+    .FILL TRAP_GETC   ; x20
     .FILL TRAP_OUT    ; x21
     .FILL TRAP_PUTS   ; x22
-    .FILL 0     ; x23
+    .FILL TRAP_IN     ; x23
     .FILL 0  ; x24
     .FILL 0   ; x25
+
+
+TRAP_GETC
+    LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to -1)
+    BRzp TRAP_GETC
+    AND R0, R0, #0
+    STI R0, OS_KBSR        ; clear the bit to signal it was read
+    LDI R0, OS_KBDR        ; read it and return
+    RTI
+
+OS_KBSR    .FILL xFE00     ; the cpu has the ability to set this to -1, the os can only clear it
+OS_KBDR    .FILL xFE02
 
 TRAP_OUT
     STI R0, OS_DDR        ; write the character and return
