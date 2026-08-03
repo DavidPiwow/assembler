@@ -233,7 +233,7 @@ impl eframe::App for LC3App {
                     ui.colored_label(egui::Color32::RED, error);
                 }
 
-                // Light & black mode 
+                // light & black mode 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let label = if self.dark_mode {
                         "Toggle light Mode"

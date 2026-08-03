@@ -260,6 +260,8 @@ impl CPU {
                 self.mar = self.mdr;
                 if self.mar == LC3_DDR {
                     print!("{}", self.registers[0] as u8 as char);
+                    use std::io::Write;                    // show output right away
+                    std::io::stdout().flush().unwrap();    
                 }
                 self.store_reg_to_memory();
             }

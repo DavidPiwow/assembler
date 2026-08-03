@@ -38,11 +38,11 @@ impl Program {
         let mut instr_pos = 0;
 
         for node in &mut self.tree {
-            println!("{:?}", node);
+            // println!("{:?}", node);   // commenting out to silence the debug output - Sneha
             let n = node.as_mut();
             let name = n.get_label_name();
             if name.is_some() {
-                println!("{}", name.unwrap());
+                // println!("{}", name.unwrap());   // commenting out to silence the debug output - Sneha
                 match n.get_operation() {
                     Operation::Literal => {
                         let label_location = self.labels.get(name.unwrap());
