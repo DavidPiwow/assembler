@@ -9,6 +9,7 @@ pub struct LC3App {
     pub running: bool,          
     pub assembled: bool,                 // added this since assembling has a seperate button
     pub error_message: Option<String>,  // show error messages
+    pub dark_mode: bool,                 // true = dark theme, false = light theme
 }
 
 
@@ -116,6 +117,7 @@ impl LC3App {
             running: false,
             assembled: false,
             error_message: None,
+            dark_mode: true,                   // app starts in dark mode
         }
     }
     
@@ -159,6 +161,13 @@ impl eframe::App for LC3App {
 
     // main loop, egui calls this every frame
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+
+        // apply the current theme (dark or light) every frame
+        if self.dark_mode {
+            ctx.set_visuals(egui::Visuals::dark());
+        } else {
+            ctx.set_visuals(egui::Visuals::light());
+        }
 
         if self.running && self.cpu.view_mcr() != 0 {
             self.cpu.step();
@@ -223,6 +232,19 @@ impl eframe::App for LC3App {
                     ui.separator();
                     ui.colored_label(egui::Color32::RED, error);
                 }
+
+                // Light & black mode 
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let label = if self.dark_mode {
+                        "Toggle light Mode"
+                    } else {
+                        "Toggle dark Mode"
+                    };
+
+                    if ui.button(label).clicked() {
+                        self.dark_mode = !self.dark_mode;   
+                    }
+                });
             });
         });
 
