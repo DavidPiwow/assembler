@@ -90,7 +90,7 @@ pub fn scan_sequence(tokens: Vec<Token>) -> Result<Program, TokenError> {
                         }
                         
                         let int_val = int_val.unwrap();
-                        for i in 0..int_val {
+                        for _ in 0..int_val {
                             nodes.push(Box::from(IntNode::from(0)));
                         }
                         mem_loc_count += int_val;

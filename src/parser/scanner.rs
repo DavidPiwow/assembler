@@ -23,6 +23,7 @@ pub enum TokenError {
     OutOfBounds(String),
     UnknownRegister(String),
     UnknownToken(Token),
+    UnknownLabel(String),
     EmptyProgram,
     MalformedInteger,
     MissingEndDirective,
@@ -39,6 +40,9 @@ impl fmt::Display for TokenError {
             }
             TokenError::UnknownRegister(register) => {
                 write!(f, "{register} is not a valid register, only R0-R7 exists")
+            }
+            TokenError::UnknownLabel(label) => {
+                write!(f, "{label} is not a known location")
             }
 
             TokenError::UnknownToken(token) => write!(f, "{token:?} was not expected here"),

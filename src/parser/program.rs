@@ -3,7 +3,7 @@
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::parser::node::{LCNode, Operation};
+use crate::parser::{node::{LCNode, Operation}, scanner::TokenError};
 
 // im not typing all that x
 pub type NodeVec = Vec<Box<dyn LCNode>>;
@@ -33,14 +33,16 @@ impl Program {
         }
     }
 
-    pub fn to_binary(&mut self) {
+    pub fn to_binary(&mut self) -> Result<(), TokenError> {
         self.binary.clear();
         let mut instr_pos = 0;
 
         for node in &mut self.tree {
+            println!("{:?}", node);
             let n = node.as_mut();
             let name = n.get_label_name();
             if name.is_some() {
+                println!("{}", name.unwrap());
                 match n.get_operation() {
                     Operation::Literal => {
                         let label_location = self.labels.get(name.unwrap());
@@ -51,9 +53,10 @@ impl Program {
                     }
                     _ => {
                         let label_location = self.labels.get(name.unwrap());
-
                         if label_location.is_some() {
                             n.init_label(*label_location.unwrap() as i16 - (instr_pos + 1));
+                        } else {
+                            return Err(TokenError::UnknownLabel(name.unwrap().to_string()));
                         }
                     }
                 }
@@ -61,6 +64,8 @@ impl Program {
             self.binary.push(node.to_binary());
             instr_pos += 1;
         }
+
+        Ok(())
     }
 
     pub fn get_binary(&self) -> &Vec<u16> {

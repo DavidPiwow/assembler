@@ -131,14 +131,14 @@ impl LC3App {
         // parser taken tokens ->  program
         let os_tokens = scanner::tokenize(TEST_OS)?;
         let mut os_program = syntax_tree::scan_sequence(os_tokens)?;
-        os_program.to_binary();
+        os_program.to_binary()?;
         let os_binary = os_program.get_binary();
 
         self.cpu.set_program(0, os_binary);
 
         let mut program =  syntax_tree::scan_sequence(tokens)?;
         // calls to_binary() on program -> machine code
-        program.to_binary();
+        program.to_binary()?;
 
         let binary = program.get_binary();
         let start = program.get_start();
