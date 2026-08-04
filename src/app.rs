@@ -10,6 +10,8 @@ pub struct LC3App {
     pub assembled: bool,                 // added this since assembling has a seperate button
     pub error_message: Option<String>,  // show error messages
     pub dark_mode: bool,                 // true = dark theme, false = light theme
+    pub console_output: String,          // everything the program has printed so far
+    pub input_text: String,              // stuff the user is typing to send to the program
 }
 
 
@@ -117,7 +119,9 @@ impl LC3App {
             running: false,
             assembled: false,
             error_message: None,
-            dark_mode: true,                   // app starts in dark mode
+            dark_mode: true,                   // app starts in dark mode - any objections to this?
+            console_output: String::new(),     // console starts empty - thinking of a new view panel in /views 
+            input_text: String::new(),         // input box starts empty - thinking of a new view panel in /views 
         }
     }
     
@@ -233,12 +237,12 @@ impl eframe::App for LC3App {
                     ui.colored_label(egui::Color32::RED, error);
                 }
 
-                // light & black mode 
+                // light & black modes toggle 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let label = if self.dark_mode {
-                        "Toggle light Mode"
+                        "Toggle light mode"
                     } else {
-                        "Toggle dark Mode"
+                        "Toggle dark mode"
                     };
 
                     if ui.button(label).clicked() {
@@ -256,6 +260,23 @@ impl eframe::App for LC3App {
         // RIGHT widget (registers and PC)
         egui::SidePanel::right("register_panel").min_width(220.0).show(ctx, |ui| {
             crate::views::register_view::draw(ui, &self.cpu);
+        });
+
+        // BOTTOM widget (console: output + input)
+        egui::TopBottomPanel::bottom("console_panel").min_height(160.0).show(ctx, |ui| {
+            let send_clicked = crate::views::console_view::draw(
+                ui,
+                &self.console_output,
+                &mut self.input_text,
+            );
+
+            // David to check this code. RN, the I/O boxes are not talking to each other 
+            // not wired to the program yet, need a public method to send input to the program
+            if send_clicked && !self.input_text.is_empty() {
+                self.console_output.push_str(&self.input_text);
+                self.console_output.push('\n');
+                self.input_text.clear();
+            }
         });
 
         // CENTER widget (memory view)
