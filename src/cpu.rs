@@ -1,13 +1,8 @@
-// Do not touch, David's
-
-
 const LC3_KBSR: u16 = 0xFE00;
 const LC3_KBDR: u16 = 0xFE02;
 const LC3_DDR: u16 = 0xFE06;
 
 /// A struct representing an LC-3 CPU
-/// 
-/// 
 #[allow(unused)]
 pub struct CPU {
     /// Instruction register
@@ -40,7 +35,6 @@ pub struct CPU {
     ben: bool,
 
 }
-
 
 #[doc(hidden)]
 #[inline(always)]
@@ -99,7 +93,6 @@ impl CPU {
     // there are three different register positions
     // so u know what
 
-
     #[doc(hidden)]
     fn get_reg1(&self) -> u16 {
         let reg_mask = 0b111 << 9;
@@ -149,7 +142,6 @@ impl CPU {
             self.psr |= 0b100;
         }
     }
-
 
     /// Runs a decode cycle on the CPU
     /// 
@@ -280,7 +272,6 @@ impl CPU {
         }
     }
 
-
     /// Trap routine
     /// 
     /// # Effects
@@ -317,7 +308,6 @@ impl CPU {
         
     }
 
-
     // this will have to change because the way s pointer works is stupid
 
     /// The RTI instruction
@@ -349,8 +339,6 @@ impl CPU {
         let ex_imm = sign_extend(imm, 9);
         self.mar = (self.pc as i16 + ex_imm) as u16;
     }
-
-
 
     /// Evaluates addressing for base-offset relative addresses
     /// 
@@ -462,7 +450,6 @@ impl CPU {
         self.registers[dr as usize] = val as u16;
     }
 
-
     /// Executes a NOT instruction
     /// 
     /// # Effects
@@ -525,7 +512,6 @@ impl CPU {
         // get current pc value
         self.pc
     }
-
 
     /// Helper function to set a program
     /// 
