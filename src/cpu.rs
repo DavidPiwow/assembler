@@ -258,10 +258,10 @@ impl CPU {
                 self.evaluate_pc_relative_address();
                 self.mdr = self.memory[self.mar as usize];
                 self.mar = self.mdr;
-                if self.mar == LC3_DDR {
-                    print!("{}", self.registers[0] as u8 as char);
-                    use std::io::Write;                    // show output right away
-                    std::io::stdout().flush().unwrap();    
+                if self.mar == LC3_DDR { // ok...ig the stored char in ddr in a buffer? (my terminal buffering) - Sneha
+                    print!("{}", self.registers[0] as u8 as char); // the os holds the char here; added the 2 lines below -Sneha
+                    use std::io::Write;                    // just so it shows right away - Sneha
+                    std::io::stdout().flush().unwrap();    // force the buffer out to the screen - Sneha
                 }
                 self.store_reg_to_memory();
             }
