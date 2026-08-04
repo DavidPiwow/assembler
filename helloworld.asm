@@ -3,7 +3,7 @@
 LEA R0, prompt1 ; Semi-colons are used to make comments
 PUTS ; This prints the string prompt1. It is an OS call
 
-HALT 
+HALT
 
 prompt1 .STRINGZ "Hello World!"
 .END
