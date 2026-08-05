@@ -1,5 +1,6 @@
 const LC3_KBSR: u16 = 0xFE00;
 const LC3_KBDR: u16 = 0xFE02;
+const LC3_DSR: u16 = 0xFE04;
 const LC3_DDR: u16 = 0xFE06;
 
 /// A struct representing an LC-3 CPU
@@ -96,8 +97,13 @@ impl CPU {
         self.memory[LC3_KBDR as usize] = c as u16; 
     }
 
-    pub fn get_display_output(&self) -> char {
-        self.memory[LC3_DDR as usize] as u8 as char
+    pub fn get_display_output(&mut self) -> Option<char> {
+        if self.memory[LC3_DDR as usize] != 0 {
+            let ret = Some(self.memory[LC3_DDR as usize] as u8 as char);
+            self.memory[LC3_DDR as usize] = 0;
+            return  ret;
+        }
+        None
     }
 
     
