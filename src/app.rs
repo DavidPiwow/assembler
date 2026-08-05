@@ -138,8 +138,11 @@ impl LC3App {
         if self.source_text.trim().is_empty() {
             return Err(TokenError::EmptyProgram);
         }
+
+        // egui doesn't recognize escape chars, this fixes it
+        let temp = self.source_text.replace("\\n", "\n");
         
-        let tokens: Vec<scanner::Token> = scanner::tokenize(&self.source_text)?;
+        let tokens: Vec<scanner::Token> = scanner::tokenize(&temp)?;
 
         // parser taken tokens ->  program
         let os_tokens = scanner::tokenize(TEST_OS)?;
