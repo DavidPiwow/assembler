@@ -312,10 +312,14 @@ impl CPU {
         if trap_vec == 0x25 { // halt
             self.mcr = 0;
             return;
-        } else if trap_vec == 0x20 { // getc
-            self.memory[LC3_KBDR as usize] = 'A' as u16;
-            self.memory[LC3_KBSR as usize] = 0xFFFF; // signals there is data to read
         }
+        // David's hardcoded GETC input - commenting it out 
+        // The os TRAP_GETC routine now sets
+        // KBSR=1 to wait, and set_kb_input() sends the real typed key. Just kept it for reference
+        // else if trap_vec == 0x20 { // getc
+        //     self.memory[LC3_KBDR as usize] = 'A' as u16;
+        //     self.memory[LC3_KBSR as usize] = 0xFFFF; // signals there is data to read
+        // }
 
         self.psr &= !0x8000; // clear bit 15
 
