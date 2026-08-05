@@ -68,7 +68,7 @@ fn starts_opcode(c: char) -> bool {
 #[doc(hidden)]
 fn is_seperator(c: char) -> bool {
     match c {
-        ' ' | '\n' | '\r' | ',' | '\0' => true,
+        ' ' | '\t' | '\n' | '\r' | ',' | '\0' => true,
         _ => false,
     }
 }
