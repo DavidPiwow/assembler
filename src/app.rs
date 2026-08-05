@@ -58,7 +58,10 @@ const TEST_OS: &str = ".ORIG x0000
 
 
 TRAP_GETC
-    LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to -1)
+    AND R0, R0, #0
+    ADD R0, R0, #1 
+    STI R0, OS_KBSR        ; signal that getc is waiting
+    LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to 0x8000)
     BRzp TRAP_GETC
     AND R0, R0, #0
     STI R0, OS_KBSR        ; clear the bit to signal it was read

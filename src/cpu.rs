@@ -92,6 +92,10 @@ impl CPU {
     }
 
 
+    pub fn is_key_ready(&self) -> bool {
+        self.memory[LC3_KBSR as usize] == 1
+    }
+
     pub fn set_kb_input(&mut self, c: char) {
         self.memory[LC3_KBSR as usize] = 0x8000;
         self.memory[LC3_KBDR as usize] = c as u16; 
