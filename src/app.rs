@@ -59,10 +59,11 @@ const TEST_OS: &str = ".ORIG x0000
 
 TRAP_GETC
     AND R0, R0, #0
-    ADD R0, R0, #1 
-    STI R0, OS_KBSR        ; signal that getc is waiting
-    LDI R0, OS_KBSR        ; wait for a keystroke (cpu set it to 0x8000)
-    BRzp TRAP_GETC
+    ADD R0, R0, #1
+    STI R0, OS_KBSR        ; signal ONCE that getc is waiting (KBSR = 1)
+TRAP_GETC_WAIT
+    LDI R0, OS_KBSR        ; poll KBSR (GUI sets it to 0x8000 when a key is sent)
+    BRzp TRAP_GETC_WAIT    ; loop on the POLL only - do NOT re-arm KBSR each pass
     AND R0, R0, #0
     STI R0, OS_KBSR        ; clear the bit to signal it was read
     LDI R0, OS_KBDR        ; read it and return
@@ -81,6 +82,7 @@ OS_SP      .FILL x3000
 
 
 TRAP_PUTS
+    ST R1, PUTS_SAVE_R1   ; preserve caller's R1 (this routine uses it as scratch)
     ADD R1, R0, #0        ; move string pointer (R0) into R1
 TRAP_PUTS_LOOP
     LDR R0, R1, #0        ; write characters in string using OUT
@@ -89,7 +91,9 @@ TRAP_PUTS_LOOP
     ADD R1, R1, #1
     BRnzp TRAP_PUTS_LOOP
 TRAP_PUTS_DONE
+    LD R1, PUTS_SAVE_R1   ; restore caller's R1 before returning
     RTI
+PUTS_SAVE_R1   .FILL 0
 
     
 
@@ -181,6 +185,11 @@ impl eframe::App for LC3App {
             ctx.request_repaint();         // keep updating the display
         }
 
+        // drain any character the program wrote via OUT into the console
+        if let Some(ch) = self.cpu.get_display_output() {
+            self.console_output.push(ch);
+        }
+
         // add assemble, run/pause, step, rest at the top
         egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -227,11 +236,13 @@ impl eframe::App for LC3App {
                     }
                 }
 
-                // RESET button 
+                // RESET button
                 if ui.button("Reset").clicked() {
                     self.cpu = CPU::default();
                     self.running = false;
                     self.assembled = false;          // need to reassemble after reset
+                    self.input_text.clear();         // clear the leftover typed input
+                    self.console_output.clear();     // clear the old console output
                 }
                 
                 // show error messages
@@ -265,19 +276,19 @@ impl eframe::App for LC3App {
             crate::views::register_view::draw(ui, &self.cpu);
         });
 
-        // BOTTOM widget (console: output + input)
+        // BOTTOM widget (console: i/o view)
         egui::TopBottomPanel::bottom("console_panel").min_height(160.0).show(ctx, |ui| {
             let send_clicked = crate::views::console_view::draw(
                 ui,
                 &self.console_output,
                 &mut self.input_text,
+                self.cpu.is_key_ready(),  
             );
 
-            // David to check this code. RN, the I/O boxes are not talking to each other 
-            // not wired to the program yet, need a public method to send input to the program
             if send_clicked && !self.input_text.is_empty() {
-                self.console_output.push_str(&self.input_text);
-                self.console_output.push('\n');
+                if let Some(c) = self.input_text.chars().next() { // returns Option<char> (either Some(c) if char or none)
+                    self.cpu.set_kb_input(c); // note: kbdr only hold 1 char, lc3's GETC needs a single key at a time
+                }
                 self.input_text.clear();
             }
         });
