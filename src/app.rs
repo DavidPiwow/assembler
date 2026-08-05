@@ -97,9 +97,9 @@ TRAP_IN
     LEA R0, TRAP_IN_MSG    ; prompt for input
     PUTS
     GETC                   ; read a character
-    OUT                    ; echo back to monitor
     ADD R6, R6, #-1
     STR R0, R6, #0         ; save the character
+    OUT                    ; echo back to monitor
     AND R0, R0, #0         ; write a linefeed, too
     ADD R0, R0, #10
     OUT
