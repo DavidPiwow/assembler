@@ -90,6 +90,18 @@ impl CPU {
         self.ben = (ir_11 & n | ir_10 & z | ir_9 & p) > 0;
     }
 
+
+    pub fn set_kb_input(&mut self, c: char) {
+        self.memory[LC3_KBSR as usize] = 0x8000;
+        self.memory[LC3_KBDR as usize] = c as u16; 
+    }
+
+    pub fn get_display_output(&self) -> char {
+        self.memory[LC3_DDR as usize] as u8 as char
+    }
+
+    
+
     // there are three different register positions
     // so u know what
 
