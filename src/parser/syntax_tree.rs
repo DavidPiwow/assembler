@@ -472,3 +472,131 @@ fn create_ijump_node(tokens: &[Token]) -> Result<IJumpNode, TokenError> {
 
     Ok(IJumpNode::from(operation, offset))
 }
+
+//
+//
+// Unit Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // convert_hex_int()
+    #[test]
+    fn test_convert_hex_int() {
+        assert_eq!(convert_hex_int(&"x3000".to_string()), Some(0x3000)); // Correct hex
+    }
+    #[test]
+    fn test_invalid_convert_hex_int() {
+        assert!(convert_hex_int(&"xG000".to_string()).is_none()); // Invalid hex
+    }
+
+    // directive_convert_int()
+    #[test]
+    fn test_hex_directive_convert_int() {
+        assert_eq!(directive_convert_int(&("x3000".to_string())), Some(12288)); // Branch 1
+    }
+    #[test]
+    fn test_int_directive_convert_int() {
+        assert_eq!(directive_convert_int(&("#1".to_string())), Some(1)); // Branch 2
+    }
+    #[test]
+    fn test_literal_directive_convert_int() {
+        assert_eq!(directive_convert_int(&("1".to_string())), Some(1)); // Branch 3
+    }
+    #[test]
+    fn test_invalid_directive_convert_int() {
+        assert!(directive_convert_int(&"invalid_input".to_string()).is_none()); // Branch 3
+    }
+
+    // scan_sequence()
+    /*
+    #[test]
+    fn test_scan_sequence() {
+        todo!()
+    }
+     */
+
+    // token_count()
+    #[test]
+    fn test_token_count() {
+        assert_eq!(token_count("ADD"), 3); // Branch 1
+    }
+    /* #[test]
+    fn test_token_count() {
+        assert_eq!(token_count("ADD"), 3); // Branch 1
+        assert_eq!(token_count("LDR"), 3); // Branch 1
+        assert_eq!(token_count("NOT"), 2); // Branch 2
+        assert_eq!(token_count("LDI"), 2); // Branch 2
+        assert_eq!(token_count("TRAP"), 1); // Branch 3
+        assert_eq!(token_count("BRnz"), 1); // Branch 3
+        assert_eq!(token_count("HALT"), 0); // Branch 4
+        assert_eq!(token_count("RTI"), 0); // Branch 4
+    }
+    */
+
+    // convert_integer()
+    /*
+    #[test]
+    fn test_convert_integer() {
+        todo!()
+    }
+     */
+
+    // convert_register()
+    #[test]
+    fn test_convert_register() {
+        let register = Token::Register("R0".to_string());
+        assert!(convert_register(&register).is_ok())
+    }
+    #[test]
+    fn test_error_convert_register() {
+        let register = Token::Register("R8".to_string());
+        assert!(convert_register(&register).is_err())
+    }
+
+    // create_arithmetic_node()
+    #[test]
+    fn test_create_arithmetic_node() {
+        let tokens = vec![
+            Token::Opcode("ADD".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Register("R2".to_string()),
+        ];
+        let res = create_arithmetic_node(&tokens);
+        assert!(res.is_ok(), "Valid arithmetic node");
+    }
+    #[test]
+    fn test_imm_create_arithmetic_node() {
+        let tokens = vec![
+            Token::Opcode("ADD".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Register("#5".to_string()),
+        ];
+        let res = create_arithmetic_node(&tokens);
+        assert!(res.is_ok(), "Valid arithmetic node");
+    }
+    #[test]
+    fn test_opcode_err_create_arithmetic_node() {
+        let tokens = vec![
+            Token::Opcode("NOR".to_string()), // Err
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Register("R2".to_string()),
+        ];
+        let res = create_arithmetic_node(&tokens);
+        assert!(matches!(res, Err(TokenError::UnknownToken(_))), "Expected UnknownToken Error")
+    }
+    #[test]
+    fn test_reg_err_create_arithmetic_node() {
+        let tokens = vec![
+            Token::Opcode("AND".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Register("R8".to_string()), // Err
+        ];
+        let res = create_arithmetic_node(&tokens);
+        assert!(matches!(res, Err(TokenError::UnknownRegister(s)) if s == "R8"), "Expected UnknownRegister Error")
+    }
+}

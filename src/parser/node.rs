@@ -572,3 +572,4 @@ impl LCNode for RtiNode {
         self.operation
     }
 }
+
