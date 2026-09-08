@@ -737,7 +737,7 @@ mod tests {
     fn test_create_ijump_node_2() {
         let tokens = vec![
             Token::Opcode("BRn".to_string()),
-            Token::Integer("500".to_string()),
+            Token::Integer("#500".to_string()),
         ];
         assert!(create_ijump_node(&tokens).is_err());
     }
