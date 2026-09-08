@@ -483,80 +483,130 @@ mod tests {
     // convert_hex_int()
     #[test]
     fn test_convert_hex_int() {
-        assert_eq!(convert_hex_int(&"x3000".to_string()), Some(0x3000)); // Correct hex
-    }
-    #[test]
-    fn test_invalid_convert_hex_int() {
-        assert!(convert_hex_int(&"xG000".to_string()).is_none()); // Invalid hex
+        assert_eq!(convert_hex_int(&"x3000".to_string()), Some(0x3000));
+        assert!(convert_hex_int(&"xG000".to_string()).is_none()); // Invalid hex// Correct hex
     }
 
     // directive_convert_int()
     #[test]
-    fn test_hex_directive_convert_int() {
-        assert_eq!(directive_convert_int(&("x3000".to_string())), Some(12288)); // Branch 1
-    }
-    #[test]
-    fn test_int_directive_convert_int() {
-        assert_eq!(directive_convert_int(&("#1".to_string())), Some(1)); // Branch 2
-    }
-    #[test]
-    fn test_literal_directive_convert_int() {
-        assert_eq!(directive_convert_int(&("1".to_string())), Some(1)); // Branch 3
-    }
-    #[test]
-    fn test_invalid_directive_convert_int() {
+    fn test_directive_convert_int() {
+        assert_eq!(directive_convert_int(&"x3000".to_string()), Some(12288)); // Branch 1
+        assert_eq!(directive_convert_int(&"#1".to_string()), Some(1)); // Branch 2
+        assert_eq!(directive_convert_int(&"1".to_string()), Some(1)); // Branch 3
         assert!(directive_convert_int(&"invalid_input".to_string()).is_none()); // Branch 3
     }
 
     // scan_sequence()
-    /*
     #[test]
-    fn test_scan_sequence() {
-        todo!()
+    fn test_scan_sequence_1() {
+        let tokens_vec = vec![
+            Token::Directive("FILL".to_string()),
+            Token::Integer("#10".to_string()), //1
+            Token::Label("SPACE".to_string()),
+            Token::Directive(".BLKW".to_string()),
+            Token::Block("#2".to_string()), //3
+            Token::Label("MSG".to_string()),
+            Token::Directive(".STRINGZ".to_string()),
+            Token::String("msg".to_string()), //7
+            Token::Label("OPERATION".to_string()),
+            Token::Opcode("ADD".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Register("R2".to_string()),
+        ];
+
+        scan_sequence(tokens_vec).expect("Successfully scanned sequence");
     }
-     */
+
+    #[test]
+    #[should_panic]
+    fn test_scan_sequence_2() {
+        let tokens_vec = vec![
+            Token::Opcode("AND".to_string()),
+            Token::Register("R0".to_string()),
+        ];
+        scan_sequence(tokens_vec);
+    }
+    #[test]
+    fn test_scan_sequence_3() {
+        let tokens_vec = vec![
+            Token::Integer("#7".to_string()),
+        ];
+        let res = scan_sequence(tokens_vec);
+        assert!(
+            matches!(res, Err(TokenError::UnknownToken(_))),
+        );
+    }
+    #[test]
+    #[should_panic]
+    fn test_scan_sequence_4() {
+        let tokens_vec = vec![
+            Token::Directive(".STRINGZ".to_string()),
+        ];
+        scan_sequence(tokens_vec);
+    }
+    #[test]
+    fn test_scan_sequence_5() {
+        let tokens_vec = vec![
+            Token::Label("START".to_string()),
+            Token::Opcode("HALT".to_string()),
+            Token::Label("START".to_string()),
+            Token::Opcode("RETURN".to_string()),
+        ];
+        scan_sequence(tokens_vec);
+    }
+    #[test]
+    #[should_panic]
+    fn test_scan_sequence_6() {
+        let tokens_vec = vec![
+            Token::Directive(".FILL".to_string()),
+            Token::String("Howdy".to_string()),
+        ];
+        scan_sequence(tokens_vec);
+    }
 
     // token_count()
     #[test]
     fn test_token_count() {
-        assert_eq!(token_count("ADD"), 3); // Branch 1
+        assert_eq!(token_count("ADD"), 3);
+        assert_eq!(token_count("HALT"), 0);
+        assert_eq!(token_count("SOME_NAME"), 0);
     }
-    /* #[test]
-    fn test_token_count() {
-        assert_eq!(token_count("ADD"), 3); // Branch 1
-        assert_eq!(token_count("LDR"), 3); // Branch 1
-        assert_eq!(token_count("NOT"), 2); // Branch 2
-        assert_eq!(token_count("LDI"), 2); // Branch 2
-        assert_eq!(token_count("TRAP"), 1); // Branch 3
-        assert_eq!(token_count("BRnz"), 1); // Branch 3
-        assert_eq!(token_count("HALT"), 0); // Branch 4
-        assert_eq!(token_count("RTI"), 0); // Branch 4
-    }
-    */
 
     // convert_integer()
-    /*
     #[test]
-    fn test_convert_integer() {
-        todo!()
+    fn test_convert_integer_1() {
+        assert!(convert_integer(&Token::Integer("#15".to_string()), 5).is_ok());
+        assert!(convert_integer(&Token::Integer("#-16".to_string()), 5).is_ok());
+        assert!(convert_integer(&Token::Integer("#255".to_string()), 9).is_ok());
+        assert!(convert_integer(&Token::Integer("#-256".to_string()), 9).is_ok());
     }
-     */
+    #[test]
+    fn test_convert_integer_2() {
+        assert!(matches!(
+            convert_integer(&Token::Integer("#16".to_string()), 5),
+            Err(TokenError::OutOfBounds(_))
+            ))
+    }
 
     // convert_register()
     #[test]
-    fn test_convert_register() {
-        let register = Token::Register("R0".to_string());
-        assert!(convert_register(&register).is_ok())
+    fn test_convert_register_1() {
+        assert!(convert_register(&Token::Register("R0".to_string())).is_ok());
+        assert!(convert_register(&Token::Register("R7".to_string())).is_ok());
     }
     #[test]
-    fn test_error_convert_register() {
-        let register = Token::Register("R8".to_string());
-        assert!(convert_register(&register).is_err())
+    fn test_error_convert_register_2() {
+        assert!(matches!(
+            convert_register(&Token::Register("R8".to_string())),
+            Err(TokenError::UnknownRegister(_))
+        ))
     }
 
     // create_arithmetic_node()
+    // register
     #[test]
-    fn test_create_arithmetic_node() {
+    fn test_create_arithmetic_node_1() {
         let tokens = vec![
             Token::Opcode("ADD".to_string()),
             Token::Register("R0".to_string()),
@@ -564,10 +614,11 @@ mod tests {
             Token::Register("R2".to_string()),
         ];
         let res = create_arithmetic_node(&tokens);
-        assert!(res.is_ok(), "Valid arithmetic node");
+        assert!(res.is_ok(), "Error: {:?}", res.err());
     }
+    // immediate mode
     #[test]
-    fn test_imm_create_arithmetic_node() {
+    fn test_create_arithmetic_node_2() {
         let tokens = vec![
             Token::Opcode("ADD".to_string()),
             Token::Register("R0".to_string()),
@@ -575,10 +626,10 @@ mod tests {
             Token::Register("#5".to_string()),
         ];
         let res = create_arithmetic_node(&tokens);
-        assert!(res.is_ok(), "Valid arithmetic node");
+        assert!(res.is_ok(), "Error: {:?}", res.err());
     }
     #[test]
-    fn test_opcode_err_create_arithmetic_node() {
+    fn test_create_arithmetic_node_3() {
         let tokens = vec![
             Token::Opcode("NOR".to_string()), // Err
             Token::Register("R0".to_string()),
@@ -586,10 +637,13 @@ mod tests {
             Token::Register("R2".to_string()),
         ];
         let res = create_arithmetic_node(&tokens);
-        assert!(matches!(res, Err(TokenError::UnknownToken(_))), "Expected UnknownToken Error")
+        match res {
+            Err(TokenError::UnknownToken(_)) => {}
+            other_err => panic!("Expected TokenError::UnknownToken, got error: {:?}", other_err),
+        }
     }
     #[test]
-    fn test_reg_err_create_arithmetic_node() {
+    fn test_create_arithmetic_node_4() {
         let tokens = vec![
             Token::Opcode("AND".to_string()),
             Token::Register("R0".to_string()),
@@ -597,6 +651,102 @@ mod tests {
             Token::Register("R8".to_string()), // Err
         ];
         let res = create_arithmetic_node(&tokens);
-        assert!(matches!(res, Err(TokenError::UnknownRegister(s)) if s == "R8"), "Expected UnknownRegister Error")
+        match res {
+            Err(TokenError::UnknownRegister(r)) if r == "R8" => {}
+            other_err => panic!("Expected TokenError::UnknownRegister, got error: {:?}", other_err),
+        }
+    }
+
+    // create_not_node
+    #[test]
+    fn test_create_not_node() {
+        let tokens = vec![
+            Token::Opcode("NOT".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+        ];
+        assert!(create_not_node(&tokens).is_ok());
+}
+
+    // create_memory_node
+    #[test]
+    fn test_create_memory_node() {
+        let tokens = vec![
+            Token::Opcode("LDR".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Register("R1".to_string()),
+            Token::Integer("#10".to_string()),
+        ];
+        assert!(create_memory_node(&tokens).is_ok());
+    }
+
+    // create_imemory_node
+    #[test]
+    fn test_create_imemory_node() {
+        let tokens = vec![
+            Token::Opcode("LEA".to_string()),
+            Token::Register("R0".to_string()),
+            Token::Integer("#-10".to_string()),
+        ];
+        assert!(create_imemory_node(&tokens).is_ok());
+    }
+
+    // create_trap_node
+    #[test]
+    fn test_create_trap_node() {
+        assert!(create_trap_node(&vec![Token::Opcode("HALT".to_string())]).is_ok());
+        assert!(create_trap_node(&vec![Token::Opcode("OUT".to_string())]).is_ok());
+    }
+
+    // create_jump_node
+    #[test]
+    fn test_create_jump_node_1() {
+        let tokens = vec![
+            Token::Opcode("JMP".to_string()),
+            Token::Register("R7".to_string())
+        ];
+        assert!(create_jump_node(&tokens).is_ok());
+    }
+    #[test]
+    fn test_create_jump_node_2() {
+        let tokens = vec![
+            Token::Opcode("JSRR".to_string()),
+            Token::Register("R0".to_string())
+        ];
+        assert!(create_jump_node(&tokens).is_ok());
+    }
+    #[test]
+    fn test_create_jump_node_3() {
+        let tokens = vec![
+            Token::Opcode("AND".to_string()),
+            Token::Register("R0".to_string()),
+        ];
+        assert!(create_jump_node(&tokens).is_err());
+    }
+
+    // create_ijump_node
+    #[test]
+    fn test_create_ijump_node_1() {
+        let tokens = vec![
+            Token::Opcode("BRz".to_string()),
+            Token::Label("GO".to_string()),
+        ];
+        assert!(create_ijump_node(&tokens).is_ok());
+    }
+    #[test]
+    fn test_create_ijump_node_2() {
+        let tokens = vec![
+            Token::Opcode("BRn".to_string()),
+            Token::Integer("500".to_string()),
+        ];
+        assert!(create_ijump_node(&tokens).is_err());
+    }
+    #[test]
+    fn test_create_ijump_node_3() {
+        let tokens = vec![
+            Token::Opcode("JSR".to_string()),
+            Token::Register("#-10".to_string()),
+        ];
+        assert!(create_jump_node(&tokens).is_err());
     }
 }
